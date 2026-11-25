@@ -29,20 +29,20 @@ die Scripts werden klassisch über `<script src>` geladen.
 Die Rechenfunktionen (`js/calc.js`) werden mit dem eingebauten Test-Runner von Node 22 geprüft:
 
 ```
-node --test "baufinanzierung/tests/*.test.cjs"
+node --test "tests/*.test.cjs"
 ```
 
 Der Browser-Test `tests/e2e.cjs` braucht Playwright mit installiertem Chromium und läuft mit
 
 ```
-node baufinanzierung/tests/e2e.cjs
+node tests/e2e.cjs
 ```
 
 ## Veröffentlichen über GitHub Pages
 
-Der Ordner `baufinanzierung/` kann als Unterordner eines GitHub-Repositorys veröffentlicht werden.
-In den Repository-Einstellungen unter „Pages“ den Branch und den Ordner des Projekts wählen.
-Danach ist die App unter der Pages-Adresse des Repositorys mit dem Pfad `/baufinanzierung/` erreichbar.
+In den Repository-Einstellungen unter „Pages“ als Quelle „Deploy from a branch“, Branch `main`
+und Ordner `/ (root)` wählen. Danach ist die App unter `https://<benutzer>.github.io/<repo>/` erreichbar.
+Hinweis: Mit einem kostenlosen GitHub-Konto funktioniert Pages nur für öffentliche Repositorys.
 Alle Pfade in der App sind relativ, deshalb funktioniert sie sowohl per `file://` als auch über Pages.
 
 ## Rechenannahmen
@@ -73,7 +73,7 @@ Unverbindliche Modellrechnung, keine Finanzberatung. Sollzins, kein Effektivzins
 ## Dateien
 
 ```
-baufinanzierung/
+./
   index.html
   css/style.css
   js/calc.js      Rechenkern (UMD, ohne DOM)

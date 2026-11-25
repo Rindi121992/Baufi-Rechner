@@ -1,7 +1,7 @@
 'use strict';
 
 // Headless-Browser-Test für den Baufinanzierungsrechner (Playwright, Chromium).
-// Aufruf: node baufinanzierung/tests/e2e.cjs
+// Aufruf: node tests/e2e.cjs
 // Lädt index.html per file:// und prüft die Kernabläufe. Exit-Code 1 bei Fehlern.
 
 const path = require('path');
