@@ -1,31 +1,14 @@
 (function (root) {
   'use strict';
 
-  // Grunderwerbsteuersätze in Prozent, Stand Vorlage (Kürzel → Name, Satz)
-  const GRUNDERWERBSTEUER = {
-    BW: { name: 'Baden-Württemberg', satz: 5.0 },
-    BY: { name: 'Bayern', satz: 3.5 },
-    BE: { name: 'Berlin', satz: 6.0 },
-    BB: { name: 'Brandenburg', satz: 6.5 },
-    HB: { name: 'Bremen', satz: 5.5 },
-    HH: { name: 'Hamburg', satz: 5.5 },
-    HE: { name: 'Hessen', satz: 6.0 },
-    MV: { name: 'Mecklenburg-Vorpommern', satz: 6.0 },
-    NI: { name: 'Niedersachsen', satz: 5.0 },
-    NW: { name: 'Nordrhein-Westfalen', satz: 6.5 },
-    RP: { name: 'Rheinland-Pfalz', satz: 5.0 },
-    SL: { name: 'Saarland', satz: 6.5 },
-    SN: { name: 'Sachsen', satz: 5.5 },
-    ST: { name: 'Sachsen-Anhalt', satz: 5.0 },
-    SH: { name: 'Schleswig-Holstein', satz: 6.5 },
-    TH: { name: 'Thüringen', satz: 5.0 }
-  };
+  // Grunderwerbsteuer Baden-Württemberg in Prozent, Stand Vorlage
+  const GRUNDERWERBSTEUER_BW = 5.0;
 
   // Standard-Szenario
   const DEFAULTS = {
     kaufpreis: 450000,
     eigenkapital: 90000,
-    bundesland: 'NW',
+    grunderwerbsteuerSatz: 5.0,
     notarSatz: 2.0,
     maklerSatz: 3.57,
     modernisierung: 0,
@@ -158,11 +141,9 @@
 
   function finanzierung(eingaben) {
     const e = eingaben || {};
-    let satz = e.grunderwerbsteuerSatz;
-    if (satz === undefined || satz === null || satz === '') {
-      const land = GRUNDERWERBSTEUER[e.bundesland];
-      satz = land ? land.satz : 0;
-    }
+    const satz = typeof e.grunderwerbsteuerSatz === 'number' && Number.isFinite(e.grunderwerbsteuerSatz)
+      ? e.grunderwerbsteuerSatz
+      : GRUNDERWERBSTEUER_BW;
     const nk = nebenkosten({
       kaufpreis: e.kaufpreis,
       grunderwerbsteuerSatz: satz,
@@ -255,7 +236,7 @@
   }
 
   const api = {
-    GRUNDERWERBSTEUER,
+    GRUNDERWERBSTEUER_BW,
     DEFAULTS,
     HAUSHALT_DEFAULTS,
     nebenkosten,

@@ -46,7 +46,7 @@ test('K4: nicht tilgbar, keine Endlosschleife, 1200 Monate', () => {
 });
 
 test('K5: eigenkapital groesser als gesamtkosten', () => {
-  const f = C.finanzierung({ kaufpreis: 300000, eigenkapital: 900000, bundesland: 'NW', notarSatz: 2, maklerSatz: 3.57,
+  const f = C.finanzierung({ kaufpreis: 300000, eigenkapital: 900000, notarSatz: 2, maklerSatz: 3.57,
     modernisierung: 0, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, anschlusszins: 4.5, anschlussTilgung: 2,
     sondertilgungJahr: 0, kfw: { aktiv: false } });
   assert.strictEqual(f.darlehenGesamt, 0);
@@ -97,10 +97,16 @@ test('Grenzfall: Rest wird nach Zinsbindung vollstaendig getilgt, Anschlussrate 
   assert.strictEqual(p.tilgbar, true);
 });
 
-test('Grenzfall: Bundesland setzt Grunderwerbsteuer in finanzierung', () => {
-  const f = C.finanzierung({ kaufpreis: 100000, eigenkapital: 0, bundesland: 'BY', notarSatz: 0, maklerSatz: 0,
+test('Grenzfall: ohne grunderwerbsteuerSatz gilt BW mit 5 % Grunderwerbsteuer', () => {
+  const f = C.finanzierung({ kaufpreis: 100000, eigenkapital: 0, notarSatz: 0, maklerSatz: 0,
     zins: 3, tilgung: 2, zinsbindungJahre: 10, anschlusszins: 4, anschlussTilgung: 2, sondertilgungJahr: 0, kfw: { aktiv: false } });
-  nah(f.nebenkosten.grunderwerbsteuer, 3500, 0.001);
+  assert.strictEqual(f.nebenkosten.grunderwerbsteuer, 5000);
+  assert.strictEqual(f.nebenkosten.grunderwerbsteuer, C.finanzierung({ kaufpreis: 100000, grunderwerbsteuerSatz: 5 }).nebenkosten.grunderwerbsteuer);
+});
+
+test('Grenzfall: grunderwerbsteuerSatz 0 ergibt keine Grunderwerbsteuer', () => {
+  const f = C.finanzierung({ kaufpreis: 100000, grunderwerbsteuerSatz: 0, notarSatz: 0, maklerSatz: 0 });
+  assert.strictEqual(f.nebenkosten.grunderwerbsteuer, 0);
 });
 
 test('Stresstest liefert fuenf Zeilen mit steigender Anschlussrate', () => {

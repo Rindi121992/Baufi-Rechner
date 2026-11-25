@@ -68,10 +68,13 @@
     const src = e || {};
     const out = Object.assign(clone(C.DEFAULTS), src);
     out.kfw = Object.assign(clone(C.DEFAULTS.kfw), src.kfw || {});
-    if (!C.GRUNDERWERBSTEUER[out.bundesland]) out.bundesland = C.DEFAULTS.bundesland;
-    if (out.grunderwerbsteuerSatz === undefined || out.grunderwerbsteuerSatz === null) {
-      out.grunderwerbsteuerSatz = C.GRUNDERWERBSTEUER[out.bundesland].satz;
+    // Altdaten mit Feld bundesland: ein abweichender Satz kam vom alten Bundesland-Default
+    const altVersion = Object.prototype.hasOwnProperty.call(src, 'bundesland');
+    if (out.grunderwerbsteuerSatz === undefined || out.grunderwerbsteuerSatz === null ||
+        (altVersion && out.grunderwerbsteuerSatz !== C.GRUNDERWERBSTEUER_BW)) {
+      out.grunderwerbsteuerSatz = C.GRUNDERWERBSTEUER_BW;
     }
+    delete out.bundesland;
     return out;
   }
 
@@ -141,7 +144,6 @@
   function schreibeFormular() {
     const e = aktiv().eingaben;
     setVal('kaufpreis', e.kaufpreis);
-    setVal('bundesland', e.bundesland);
     setVal('modernisierung', e.modernisierung);
     setVal('grest', e.grunderwerbsteuerSatz);
     setVal('notar', e.notarSatz);
@@ -174,7 +176,6 @@
   function leseFormular() {
     const e = aktiv().eingaben;
     e.kaufpreis = feldZahl('kaufpreis');
-    e.bundesland = $('bundesland').value;
     e.modernisierung = feldZahl('modernisierung');
     e.grunderwerbsteuerSatz = feldZahl('grest');
     e.notarSatz = feldZahl('notar');
@@ -443,10 +444,6 @@
   // ---------- Ereignisse ----------
 
   function onEingabe(ev) {
-    if (ev.target.id === 'bundesland') {
-      const land = C.GRUNDERWERBSTEUER[ev.target.value];
-      if (land) $('grest').value = String(land.satz);
-    }
     if (ev.target.id === 'kfw-aktiv') {
       $('kfw-felder').hidden = !$('kfw-aktiv').checked;
     }
@@ -648,16 +645,6 @@
   }
 
   function init() {
-    const bl = $('bundesland');
-    Object.keys(C.GRUNDERWERBSTEUER)
-      .sort(function (a, b) { return C.GRUNDERWERBSTEUER[a].name.localeCompare(C.GRUNDERWERBSTEUER[b].name, 'de'); })
-      .forEach(function (k) {
-        const land = C.GRUNDERWERBSTEUER[k];
-        const o = el('option', land.name + ' (' + pct(land.satz, 1) + ')');
-        o.value = k;
-        bl.appendChild(o);
-      });
-
     const geladen = S.laden();
     zustand = geladen ? normalisiere(geladen) : standardZustand();
     const hinzugefuegt = uebernehmeLinkAusHash();

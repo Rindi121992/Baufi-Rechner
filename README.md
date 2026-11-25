@@ -5,7 +5,7 @@ Ein privater Baufinanzierungsrechner für Deutschland als statische Web-App
 
 ## Was die App kann
 
-- **Rechner:** Kaufnebenkosten (Grunderwerbsteuer nach Bundesland, Notar und Grundbuch, Makler),
+- **Rechner:** Kaufnebenkosten (Grunderwerbsteuer für Baden-Württemberg (5,0 %, änderbar), Notar und Grundbuch, Makler),
   Darlehenssumme, Monatsrate, Restschuld nach Zinsbindung, Anschlussrate, Gesamtlaufzeit,
   Gesamtzinsen, Beleihungsauslauf und Eigenkapitalquote.
 - **Tilgungsplan:** Jahresübersicht mit Zinsen, Tilgung, Sondertilgung und Restschuld,
@@ -56,7 +56,7 @@ Alle Pfade in der App sind relativ, deshalb funktioniert sie sowohl per `file://
 - Ist die Rate nicht höher als der erste Monatszins, wird das Darlehen nie getilgt; die App zeigt dann eine Warnung.
 - KfW-Darlehen: eigener Plan mit eigenem Zins, eigener Tilgung und eigener Zinsbindung, ohne Sondertilgung.
   Die Anschlussrate, die Restschuld nach Zinsbindung und der Stresstest beziehen sich auf das Bankdarlehen.
-- Sollzins, kein Effektivzins. Die Grunderwerbsteuersätze sind Stand der Vorlage und können im Feld
+- Sollzins, kein Effektivzins. Der Grunderwerbsteuersatz (Baden-Württemberg, 5,0 %) ist Stand der Vorlage und kann im Feld
   überschrieben werden.
 - Alle Beträge werden ungerundet gerechnet; gerundet wird nur in der Anzeige.
 

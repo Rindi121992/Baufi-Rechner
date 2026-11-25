@@ -33,7 +33,7 @@ async function main() {
 
     const rateText = () => page.textContent('#out-rate');
     const rateAusgangs = await rateText();
-    pruefe('Monatsrate mit Defaults angezeigt', /1\.933,47/.test(rateAusgangs), 'Anzeige: ' + rateAusgangs);
+    pruefe('Monatsrate mit Defaults angezeigt', /1\.901,97/.test(rateAusgangs), 'Anzeige: ' + rateAusgangs);
 
     await page.fill('#kaufpreis', '400000');
     await page.dispatchEvent('#kaufpreis', 'input');
@@ -42,9 +42,12 @@ async function main() {
     await page.fill('#kaufpreis', '450000');
     await page.dispatchEvent('#kaufpreis', 'input');
 
-    await page.selectOption('#bundesland', 'BY');
-    const grest = await page.inputValue('#grest');
-    pruefe('Bundesland BY setzt Grunderwerbsteuer 3,5', Number(grest) === 3.5, 'Wert: ' + grest);
+    const grestStart = await page.inputValue('#grest');
+    pruefe('Grunderwerbsteuer beim Start 5 (BW)', Number(grestStart) === 5, 'Wert: ' + grestStart);
+    const bundeslandFeld = await page.$('#bundesland');
+    pruefe('Kein Feld #bundesland vorhanden', bundeslandFeld === null);
+    await page.fill('#grest', '3.5');
+    await page.dispatchEvent('#grest', 'input');
 
     // Szenario duplizieren, Vergleich prüfen
     await page.click('#btn-duplizieren');
@@ -70,7 +73,7 @@ async function main() {
 
     // Teilen-Link-Roundtrip mit Umlauten (im Browser-Kontext)
     const roundtrip = await page.evaluate(() => {
-      const s = { id: 'x1', name: 'Küche größer – Müller & Söhne', eingaben: { kaufpreis: 123456, bundesland: 'BY' } };
+      const s = { id: 'x1', name: 'Küche größer – Müller & Söhne', eingaben: { kaufpreis: 123456 } };
       const link = window.BaufiStorage.teilenLink(s);
       const zurueck = window.BaufiStorage.ausLink(link.split('#')[1]);
       const mitRaute = window.BaufiStorage.ausLink(link.slice(link.indexOf('#')));
@@ -86,6 +89,33 @@ async function main() {
     pruefe('Keine Konsolenfehler (Desktop-Lauf)', fehler.length === 0, fehler.join(' | ').slice(0, 300));
 
     await ctx.close();
+
+    // ---------- Altdaten-Lauf: altes Szenario mit bundesland und abweichendem Satz ----------
+    const altCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const altPage = await altCtx.newPage();
+    const altFehler = [];
+    altPage.on('console', (msg) => { if (msg.type() === 'error') altFehler.push('console: ' + msg.text()); });
+    altPage.on('pageerror', (err) => altFehler.push('pageerror: ' + err.message));
+    await altPage.goto(INDEX);
+    await altPage.waitForSelector('#out-rate');
+    await altPage.evaluate(() => {
+      const altes = {
+        version: 1,
+        szenarien: [{ id: 'alt1', name: 'Altes Szenario', eingaben: { kaufpreis: 450000, bundesland: 'NW', grunderwerbsteuerSatz: 6.5 } }],
+        aktivId: 'alt1',
+        haushalt: {}
+      };
+      localStorage.setItem('baufi.v1', JSON.stringify(altes));
+    });
+    await altPage.reload();
+    await altPage.waitForSelector('#out-rate');
+    const grestAlt = await altPage.inputValue('#grest');
+    pruefe('Altdaten NW 6,5 wird auf BW 5 gesetzt', Number(grestAlt) === 5, 'Wert: ' + grestAlt);
+    const gespeichert = await altPage.evaluate(() => JSON.parse(localStorage.getItem('baufi.v1')));
+    const altesEingaben = gespeichert.szenarien[0].eingaben;
+    pruefe('Altdaten: Feld bundesland gelöscht', !('bundesland' in altesEingaben), 'Felder: ' + Object.keys(altesEingaben).length);
+    pruefe('Altdaten-Lauf ohne Konsolenfehler', altFehler.length === 0, altFehler.join(' | ').slice(0, 300));
+    await altCtx.close();
 
     // ---------- Mobil-Lauf (375 px) ----------
     const mobil = await browser.newContext({ viewport: { width: 375, height: 800 } });
