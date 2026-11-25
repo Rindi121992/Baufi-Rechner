@@ -22,6 +22,12 @@
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
+  function proMonat(v) { return eur0.format(v) + ' / Monat'; }
+
+  function quoteVon(betrag, einnahmen) {
+    return einnahmen > 0 ? pct(betrag / einnahmen * 100, 1) + ' der Einnahmen' : '–';
+  }
+
   function pct(v, digits) {
     return (digits === 2 ? nf2 : nf1).format(v) + ' %';
   }
@@ -144,9 +150,11 @@
 
   // ---------- Formular lesen/schreiben ----------
 
-  function zeigeObjektFelder(objektart) {
-    $('haus-felder').hidden = objektart === 'wohnung';
-    $('wohnung-felder').hidden = objektart !== 'wohnung';
+  // Abhängige Feldgruppen (KfW, Haus/Wohnung) passend zum Szenario ein-/ausblenden
+  function aktualisiereSichtbarkeit(e) {
+    $('kfw-felder').hidden = !e.kfw.aktiv;
+    $('haus-felder').hidden = e.objektart !== 'haus';
+    $('wohnung-felder').hidden = e.objektart !== 'wohnung';
   }
 
   function schreibeFormular() {
@@ -162,8 +170,7 @@
     setVal('zinsbindung', e.zinsbindungJahre);
     setVal('sondertilgung', e.sondertilgungJahr);
     setVal('einmalkosten', e.einmalkosten);
-    $(e.objektart === 'wohnung' ? 'objektart-wohnung' : 'objektart-haus').checked = true;
-    zeigeObjektFelder(e.objektart);
+    $('objektart-' + e.objektart).checked = true;
     setVal('wohnflaeche', e.wohnflaeche);
     setVal('nebenkosten-qm', e.nebenkostenQm);
     setVal('instandhaltung-qm', e.instandhaltungQmJahr);
@@ -172,7 +179,7 @@
     setVal('anschlusszins', e.anschlusszins);
     setVal('anschlusstilgung', e.anschlussTilgung);
     $('kfw-aktiv').checked = !!e.kfw.aktiv;
-    $('kfw-felder').hidden = !e.kfw.aktiv;
+    aktualisiereSichtbarkeit(e);
     setVal('kfw-betrag', e.kfw.betrag);
     setVal('kfw-zins', e.kfw.zins);
     setVal('kfw-tilgung', e.kfw.tilgung);
@@ -201,7 +208,7 @@
     e.zinsbindungJahre = Number($('zinsbindung').value);
     e.sondertilgungJahr = feldZahl('sondertilgung');
     e.einmalkosten = feldZahl('einmalkosten');
-    e.objektart = $('objektart-wohnung').checked ? 'wohnung' : 'haus';
+    e.objektart = document.querySelector('input[name="objektart"]:checked').value;
     e.wohnflaeche = feldZahl('wohnflaeche');
     e.nebenkostenQm = feldZahl('nebenkosten-qm');
     e.instandhaltungQmJahr = feldZahl('instandhaltung-qm');
@@ -251,10 +258,8 @@
     });
   }
 
-  function renderRechner() {
-    const s = aktiv();
-    const e = s.eingaben;
-    const f = C.finanzierung(e);
+  function renderRechner(f) {
+    const e = aktiv().eingaben;
     const b = f.bank;
     const k = f.kfw;
     const nk = f.nebenkosten;
@@ -268,7 +273,7 @@
     $('out-sollzins').textContent = 'Bankdarlehen · Sollzins ' + pct(e.zins, 2);
 
     const bew = f.bewirtschaftung;
-    $('out-bew').textContent = eur0.format(bew.summe) + ' / Monat';
+    $('out-bew').textContent = proMonat(bew.summe);
     $('out-bew-hinweis').textContent = e.objektart === 'wohnung'
       ? 'Hausgeld und Sonstiges ' + eur0.format(bew.nebenkosten) + ' (Rücklage im Hausgeld)'
       : 'Nebenkosten ' + eur0.format(bew.nebenkosten) + ' · Rücklage ' + eur0.format(bew.ruecklage);
@@ -312,7 +317,7 @@
     });
 
     CH.restschuld($('diagramm-rechner'), [{
-      name: s.name,
+      name: aktiv().name,
       farbe: PALETTE[0],
       punkte: punkte(b),
       zinsbindungJahre: e.zinsbindungJahre
@@ -324,11 +329,14 @@
 
   // ---------- Rendering: Vergleich ----------
 
-  function renderVergleich() {
+  function berechneAlle() {
+    return zustand.szenarien.map(function (s) { return C.finanzierung(s.eingaben); });
+  }
+
+  function renderVergleich(ergebnisse) {
     const szenarien = zustand.szenarien;
-    const haushalt = zustand.haushalt;
-    const einnahmen = C.leistbarkeit(haushalt).einnahmen;
-    const ergebnisse = szenarien.map(function (s) { return C.finanzierung(s.eingaben); });
+    const einnahmen = C.leistbarkeit(zustand.haushalt).einnahmen;
+    ergebnisse = ergebnisse || berechneAlle();
 
     const kopf = $('vergleich-kopf');
     kopf.textContent = '';
@@ -350,7 +358,7 @@
       { label: 'Tilgung', wert: function (s) { return pct(s.eingaben.tilgung, 2); } },
       { label: 'Zinsbindung', wert: function (s) { return s.eingaben.zinsbindungJahre + ' Jahre'; } },
       { label: 'Monatsrate', wert: function (s, f) { return eur2.format(f.rateGesamt); }, zahl: function (f) { return f.rateGesamt; } },
-      { label: 'Laufende Kosten', wert: function (s, f) { return eur0.format(f.bewirtschaftung.summe) + ' / Monat'; } },
+      { label: 'Laufende Kosten', wert: function (s, f) { return proMonat(f.bewirtschaftung.summe); } },
       { label: 'Gesamtbelastung', wert: function (s, f) { return eur2.format(f.belastungGesamt); }, zahl: function (f) { return f.belastungGesamt; } },
       { label: 'Restschuld nach Zinsbindung', wert: function (s, f) { return eur0.format(f.restschuldZinsbindung); }, zahl: function (f) { return f.restschuldZinsbindung; } },
       { label: 'Anschlussrate', wert: function (s, f) { return f.bank.anschlussrate > 0 ? eur2.format(f.bank.anschlussrate) : '–'; } },
@@ -419,9 +427,9 @@
 
   // ---------- Rendering: Leistbarkeit ----------
 
-  function berechneLeistbarkeit() {
+  function berechneLeistbarkeit(fAktiv) {
     const e = aktiv().eingaben;
-    const f = C.finanzierung(e);
+    const f = fAktiv || C.finanzierung(e);
     const l = C.leistbarkeit(Object.assign({}, zustand.haushalt, {
       zins: e.zins,
       tilgung: e.tilgung,
@@ -432,39 +440,38 @@
     return { l: l, f: f };
   }
 
-  function renderLeistbarkeit() {
-    const { l, f } = berechneLeistbarkeit();
+  function renderLeistbarkeit(fAktiv) {
+    const { l, f } = berechneLeistbarkeit(fAktiv);
     $('leist-szenario').textContent = aktiv().name;
     $('leist-frei').textContent = eur0.format(l.freieRate);
     $('leist-quote').textContent = eur0.format(l.quotenRate);
     $('leist-maxrate').textContent = eur0.format(l.maxRate);
     $('leist-maxdarlehen').textContent = eur0.format(l.maxDarlehen);
     $('leist-maxkaufpreis').textContent = eur0.format(l.maxKaufpreis);
-    $('leist-bew-szenario').textContent = aktiv().name;
-    $('leist-bew').textContent = eur0.format(f.bewirtschaftung.summe) + '/Monat';
+    $('leist-bew').textContent = proMonat(f.bewirtschaftung.summe);
 
     const amp = C.ampel(f.rateGesamt, l.einnahmen);
-    const quote = l.einnahmen > 0 ? f.rateGesamt / l.einnahmen * 100 : null;
-    const box = $('leist-ampel');
-    box.className = 'ampel ampel-' + amp;
-    $('leist-ampel-wert').textContent = quote === null ? '–' : pct(quote, 1) + ' der Einnahmen';
+    $('leist-ampel').className = 'ampel ampel-' + amp;
+    $('leist-ampel-wert').textContent = quoteVon(f.rateGesamt, l.einnahmen);
     let text;
     if (amp === 'gruen') text = 'Gut tragbar: die Rate liegt unter 30 % der Einnahmen.';
     else if (amp === 'gelb') text = 'Angespannt: die Rate liegt zwischen 30 und 40 % der Einnahmen.';
     else text = 'Zu hoch: die Rate liegt über 40 % der Einnahmen oder es gibt keine Einnahmen.';
     $('leist-ampel-text').textContent = text;
 
-    const gesamtQuote = l.einnahmen > 0 ? f.belastungGesamt / l.einnahmen * 100 : null;
     $('leist-gesamt').textContent = 'Gesamtbelastung ' + eur0.format(f.belastungGesamt) + ' = ' +
-      (gesamtQuote === null ? '–' : pct(gesamtQuote, 1) + ' der Einnahmen');
+      quoteVon(f.belastungGesamt, l.einnahmen);
 
     $('btn-kaufpreis-uebernehmen').disabled = !(Math.floor(l.maxKaufpreis / 1000) * 1000 > 0);
   }
 
+  // finanzierung() einmal je Szenario und Render; Ergebnisse an alle Ansichten weitergeben
   function renderAlles() {
-    renderRechner();
-    renderVergleich();
-    renderLeistbarkeit();
+    const alle = berechneAlle();
+    const fAktiv = alle[zustand.szenarien.indexOf(aktiv())];
+    renderRechner(fAktiv);
+    renderVergleich(alle);
+    renderLeistbarkeit(fAktiv);
   }
 
   function aktualisiereSzenarioLeiste() {
@@ -485,19 +492,17 @@
   // ---------- Ereignisse ----------
 
   function onEingabe(ev) {
-    if (ev.target.id === 'kfw-aktiv') {
-      $('kfw-felder').hidden = !$('kfw-aktiv').checked;
-    }
     leseFormular();
-    zeigeObjektFelder(aktiv().eingaben.objektart);
+    if (ev.target.id === 'kfw-aktiv' || ev.target.name === 'objektart') aktualisiereSichtbarkeit(aktiv().eingaben);
     renderAlles();
     speichereVerzoegert();
   }
 
   function onHaushalt() {
     leseHaushalt();
-    renderVergleich();
-    renderLeistbarkeit();
+    const alle = berechneAlle();
+    renderVergleich(alle);
+    renderLeistbarkeit(alle[zustand.szenarien.indexOf(aktiv())]);
     speichereVerzoegert();
   }
 

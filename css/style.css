@@ -128,7 +128,8 @@ summary:focus-visible,
 }
 
 #btn-kaufpreis-uebernehmen,
-.tabs [aria-selected="true"] {
+.tabs [aria-selected="true"],
+.segment-option input:checked + span {
   background: var(--akzent);
   color: var(--akzent-text);
   border-color: var(--akzent);
@@ -235,7 +236,8 @@ legend {
   gap: 0.5rem;
 }
 
-.feld label {
+.feld label,
+.feld-titel {
   font-size: 0.92rem;
   color: var(--text-muted);
 }
@@ -280,6 +282,9 @@ legend {
 
 .kachel-rate {
   border-color: var(--akzent);
+}
+
+.kacheln > .kachel-rate {
   grid-column: 1 / -1;
 }
 
@@ -310,15 +315,6 @@ legend {
   gap: 0.7rem;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   min-width: 0;
-}
-
-.kachel-paar > .kachel-rate {
-  grid-column: auto;
-}
-
-.feld-titel {
-  font-size: 0.92rem;
-  color: var(--text-muted);
 }
 
 .segment {
@@ -358,11 +354,6 @@ legend {
 
 .segment-option + .segment-option span {
   border-left: 1px solid var(--akzent);
-}
-
-.segment-option input:checked + span {
-  background: var(--akzent);
-  color: var(--akzent-text);
 }
 
 .segment-option input:focus-visible + span {
@@ -490,10 +481,6 @@ tr.phase2-beginn td {
 .ampel-wert {
   font-size: 1.3rem;
   font-weight: 700;
-}
-
-#leist-gesamt {
-  font-weight: 600;
 }
 
 .ampel-gruen {

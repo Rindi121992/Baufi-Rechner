@@ -55,6 +55,18 @@
     return { grunderwerbsteuer, notar, makler, summe, quote };
   }
 
+  function bankOptionen(e, betrag) {
+    return {
+      betrag,
+      zins: e.zins,
+      tilgung: e.tilgung,
+      zinsbindungJahre: e.zinsbindungJahre,
+      anschlusszins: e.anschlusszins,
+      anschlussTilgung: e.anschlussTilgung,
+      sondertilgungJahr: e.sondertilgungJahr
+    };
+  }
+
   function annuitaetenplan(opts) {
     const o = opts || {};
     const betrag = num(o.betrag);
@@ -69,7 +81,7 @@
     if (betrag <= 0) {
       return {
         betrag: 0, rate: 0, anschlussrate: 0, restschuldZinsbindung: 0, gesamtzinsen: 0,
-        zinsenZinsbindung: 0, laufzeitMonate: 0, tilgbar: true, jahre: []
+        zinsenZinsbindung: 0, laufzeitMonate: 0, tilgbar: true, jahre: [], zahlungenZinsbindung: []
       };
     }
 
@@ -85,6 +97,7 @@
     let zinsenZB = 0;
     let gesamtzinsen = 0;
     const jahre = [];
+    const zahlungenZB = [];
 
     while (monate < maxMonate && rest >= 0.005) {
       monate += 1;
@@ -118,6 +131,7 @@
       if (phase === 1) {
         restZB = rest;
         zinsenZB += zinsMonat;
+        zahlungenZB.push(zinsMonat + tilg + sondertilgung);
       }
       gesamtzinsen += zinsMonat;
 
@@ -132,6 +146,9 @@
       j.restschuld = rest;
     }
 
+    // Für den Effektivzins: Restschuld wird im letzten Monat der Zinsbindung als Zahlung gewertet
+    if (zahlungenZB.length === zbMonate && zbMonate > 0) zahlungenZB[zbMonate - 1] += restZB;
+
     return {
       betrag,
       rate,
@@ -141,68 +158,39 @@
       zinsenZinsbindung: zinsenZB,
       laufzeitMonate: monate,
       tilgbar,
-      jahre
+      jahre,
+      zahlungenZinsbindung: zahlungenZB
     };
   }
 
-  // Zahlungsreihe der Zinsbindung (Monatsende) wie in annuitaetenplan, im letzten Monat inkl. Restschuld
-  function zahlungsreiheZinsbindung(o) {
-    const betrag = num(o.betrag);
-    const zins = num(o.zins);
-    const tilgung = num(o.tilgung);
-    const zbMonate = Math.max(0, Math.round(num(o.zinsbindungJahre) * 12));
-    const sonder = Math.max(0, num(o.sondertilgungJahr));
-    const rate = betrag * (zins + tilgung) / 100 / 12;
-    const zahlungen = [];
-    let rest = betrag;
-    for (let monate = 1; monate <= zbMonate && rest >= 0.005; monate++) {
-      const zinsMonat = rest * zins / 100 / 12;
-      let tilg = Math.min(rate - zinsMonat, rest);
-      if (!(tilg > 0)) tilg = 0;
-      rest -= tilg;
-      let zahlung = zinsMonat + tilg;
-      if (monate % 12 === 0 && sonder > 0 && rest > 0) {
-        const st = Math.min(sonder, rest);
-        rest -= st;
-        zahlung += st;
-      }
-      if (monate === zbMonate) {
-        zahlung += rest;
-        rest = 0;
-      }
-      zahlungen.push(zahlung);
+  function barwert(zahlungen, i) {
+    let summe = 0;
+    let faktor = 1;
+    for (let m = 0; m < zahlungen.length; m++) {
+      faktor /= (1 + i);
+      summe += zahlungen[m] * faktor;
     }
-    return zahlungen;
+    return summe;
   }
 
-  // Effektivzins nach PAngV-Methode (monatliche Zahlungen), in Prozent p. a.
-  function effektivzins(o) {
-    const opts = o || {};
-    const betrag = num(opts.betrag);
-    if (betrag <= 0 || num(opts.zinsbindungJahre) <= 0) return 0;
-    const zahlungen = zahlungsreiheZinsbindung(opts);
-    const auszahlung = betrag - num(opts.einmalkosten);
-    if (auszahlung <= 0) return 0;
-
-    function barwert(i) {
-      let summe = 0;
-      let faktor = 1;
-      for (let m = 0; m < zahlungen.length; m++) {
-        faktor /= (1 + i);
-        summe += zahlungen[m] * faktor;
-      }
-      return summe;
-    }
-
+  // Effektivzins nach PAngV-Methode (monatliche Zahlungen) aus einem fertigen Plan, in Prozent p. a.
+  function effektivzinsAusPlan(plan, einmalkosten) {
+    const zahlungen = plan.zahlungenZinsbindung;
+    const auszahlung = plan.betrag - num(einmalkosten);
+    if (plan.betrag <= 0 || zahlungen.length === 0 || auszahlung <= 0) return 0;
     let lo = 0;
     let hi = 0.05;
-    for (let k = 0; k < 200; k++) {
+    while (hi - lo > 1e-12) {
       const mitte = (lo + hi) / 2;
-      if (barwert(mitte) > auszahlung) lo = mitte;
+      if (barwert(zahlungen, mitte) > auszahlung) lo = mitte;
       else hi = mitte;
     }
-    const i = (lo + hi) / 2;
-    return (Math.pow(1 + i, 12) - 1) * 100;
+    return (Math.pow(1 + (lo + hi) / 2, 12) - 1) * 100;
+  }
+
+  function effektivzins(o) {
+    const opts = o || {};
+    return effektivzinsAusPlan(annuitaetenplan(opts), opts.einmalkosten);
   }
 
   // Laufende Kosten der Immobilie in €/Monat
@@ -255,15 +243,7 @@
       });
     }
 
-    const bank = annuitaetenplan({
-      betrag: darlehenGesamt - kfwBetrag,
-      zins: e.zins,
-      tilgung: e.tilgung,
-      zinsbindungJahre: e.zinsbindungJahre,
-      anschlusszins: e.anschlusszins,
-      anschlussTilgung: e.anschlussTilgung,
-      sondertilgungJahr: e.sondertilgungJahr
-    });
+    const bank = annuitaetenplan(bankOptionen(e, darlehenGesamt - kfwBetrag));
 
     const rateGesamt = bank.rate + (kfwPlan ? kfwPlan.rate : 0);
     const bew = bewirtschaftung(e);
@@ -277,14 +257,7 @@
       bank,
       kfw: kfwPlan,
       rateGesamt,
-      effektivzins: effektivzins({
-        betrag: bank.betrag,
-        zins: e.zins,
-        tilgung: e.tilgung,
-        zinsbindungJahre: e.zinsbindungJahre,
-        sondertilgungJahr: e.sondertilgungJahr,
-        einmalkosten: e.einmalkosten
-      }),
+      effektivzins: effektivzinsAusPlan(bank, e.einmalkosten),
       bewirtschaftung: bew,
       belastungGesamt: rateGesamt + bew.summe,
       gesamtzinsen: bank.gesamtzinsen + (kfwPlan ? kfwPlan.gesamtzinsen : 0),
@@ -293,16 +266,18 @@
     };
   }
 
+  // Stresstest: nur das Bankdarlehen, Betrag einmal ermitteln, dann je Anschlusszins nur der Plan
   function stresstest(eingaben, anschlusszinsen) {
     const liste = anschlusszinsen || [3, 4, 5, 6, 7];
+    const betrag = finanzierung(eingaben).bank.betrag;
     return liste.map(function (az) {
-      const f = finanzierung(Object.assign({}, eingaben, { anschlusszins: az }));
+      const plan = annuitaetenplan(Object.assign(bankOptionen(eingaben, betrag), { anschlusszins: az }));
       return {
         anschlusszins: az,
-        anschlussrate: f.bank.anschlussrate,
-        gesamtzinsen: f.bank.gesamtzinsen,
-        laufzeitMonate: f.bank.laufzeitMonate,
-        tilgbar: f.bank.tilgbar
+        anschlussrate: plan.anschlussrate,
+        gesamtzinsen: plan.gesamtzinsen,
+        laufzeitMonate: plan.laufzeitMonate,
+        tilgbar: plan.tilgbar
       };
     });
   }
