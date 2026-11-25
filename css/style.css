@@ -1,0 +1,524 @@
+:root {
+  --bg: #f4f6f9;
+  --flaeche: #ffffff;
+  --text: #1c2430;
+  --text-muted: #5b6676;
+  --linie: #d7dde6;
+  --akzent: #2563eb;
+  --akzent-text: #ffffff;
+  --fokus: #f59e0b;
+  --gruen: #15803d;
+  --gruen-bg: #dcfce7;
+  --gelb: #a16207;
+  --gelb-bg: #fef9c3;
+  --rot: #b91c1c;
+  --rot-bg: #fee2e2;
+  --warn-bg: #fff4e5;
+  --warn-text: #8a4b00;
+  --phase2: #f1f5f9;
+  --radius: 10px;
+  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --flaeche: #1f2937;
+    --text: #e5e7eb;
+    --text-muted: #9ca3af;
+    --linie: #374151;
+    --akzent: #60a5fa;
+    --akzent-text: #0b1220;
+    --fokus: #fbbf24;
+    --gruen: #86efac;
+    --gruen-bg: #14532d;
+    --gelb: #fde68a;
+    --gelb-bg: #713f12;
+    --rot: #fca5a5;
+    --rot-bg: #7f1d1d;
+    --warn-bg: #3b2a10;
+    --warn-text: #fcd9a0;
+    --phase2: #263244;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--schrift);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.2rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.6rem;
+}
+
+.untertitel {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.kopf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.2rem 1rem 0.8rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.werkzeuge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+button,
+select,
+input[type="number"] {
+  font: inherit;
+  color: var(--text);
+}
+
+button {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  min-height: 2.4rem;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--akzent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 2px;
+}
+
+#btn-kaufpreis-uebernehmen,
+.tabs [aria-selected="true"] {
+  background: var(--akzent);
+  color: var(--akzent-text);
+  border-color: var(--akzent);
+}
+
+.status {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  min-height: 1.2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  max-width: 1200px;
+  margin: 0.4rem auto 0;
+  padding: 0 1rem;
+  flex-wrap: wrap;
+}
+
+.tabs [role="tab"] {
+  border-radius: 8px 8px 0 0;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.panel {
+  padding-top: 1rem;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.szenario-leiste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.szenario-leiste select {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: var(--flaeche);
+  min-width: 12rem;
+}
+
+.rechner-raster {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .rechner-raster {
+    grid-template-columns: minmax(300px, 380px) 1fr;
+  }
+}
+
+.eingaben {
+  display: grid;
+  gap: 0.8rem;
+}
+
+fieldset {
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  padding: 0.6rem 0.9rem 0.8rem;
+  margin: 0;
+  min-width: 0;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+
+.feld {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.45rem 0;
+}
+
+.feld-check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feld label {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.feld input[type="number"],
+.feld select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: var(--flaeche);
+}
+
+.feld input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.ergebnisse {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.kacheln {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.kachel {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.kachel-rate {
+  border-color: var(--akzent);
+  grid-column: 1 / -1;
+}
+
+.kachel-titel {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.kachel-wert {
+  font-size: 1.15rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.kachel-wert.gross {
+  font-size: 2rem;
+  color: var(--akzent);
+}
+
+.kachel-hinweis {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.aufschluesselung {
+  margin: 0.3rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.warnung {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border: 1px solid var(--warn-text);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.karte {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.tilgungsplan summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tilgungsplan[open] summary {
+  margin-bottom: 0.6rem;
+}
+
+.tabelle-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--linie);
+  text-align: right;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+thead th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+tr.phase2 td {
+  background: var(--phase2);
+}
+
+tr.phase2-beginn td {
+  border-top: 2px dashed var(--text-muted);
+}
+
+.vergleich th[scope="row"] {
+  font-weight: 500;
+}
+
+.vergleich td.bester {
+  font-weight: 700;
+  color: var(--gruen);
+}
+
+.hinweis {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0.6rem 0;
+}
+
+.legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.legende-eintrag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+}
+
+.ampel {
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--linie);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ampel-wert {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.ampel-gruen {
+  background: var(--gruen-bg);
+  color: var(--gruen);
+}
+
+.ampel-gelb {
+  background: var(--gelb-bg);
+  color: var(--gelb);
+}
+
+.ampel-rot {
+  background: var(--rot-bg);
+  color: var(--rot);
+}
+
+td .ampel-text {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+td span.ampel-gruen,
+td span.ampel-gelb,
+td span.ampel-rot {
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+#diagramm-rechner,
+#diagramm-vergleich {
+  width: 100%;
+}
+
+.bfc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.bfc-text {
+  fill: var(--text-muted);
+  font-size: 13px;
+  font-family: var(--schrift);
+}
+
+.bfc-gitter {
+  stroke: var(--linie);
+  stroke-width: 1;
+}
+
+.bfc-achse {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.bfc-zinsbindung {
+  stroke-dasharray: 6 4;
+  stroke-width: 1.5;
+}
+
+.bfc-leer {
+  color: var(--text-muted);
+}
+
+.fuss {
+  max-width: 1200px;
+  margin: 2rem auto 1rem;
+  padding: 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--linie);
+  padding-top: 0.8rem;
+}
+
+.fuss p {
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .kopf {
+    padding-top: 0.8rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+
+  .kachel-wert.gross {
+    font-size: 1.7rem;
+  }
+
+  .szenario-leiste select {
+    min-width: 0;
+    width: 100%;
+  }
+}

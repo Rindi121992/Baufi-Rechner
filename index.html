@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Baufinanzierungsrechner</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="kopf">
+    <div>
+      <h1>Baufinanzierungsrechner</h1>
+      <p class="untertitel">Privat · alle Daten bleiben in deinem Browser</p>
+    </div>
+    <div class="werkzeuge">
+      <button type="button" id="btn-exportieren">Exportieren</button>
+      <button type="button" id="btn-importieren">Importieren</button>
+      <input type="file" id="datei-import" accept=".json,application/json" hidden>
+      <button type="button" id="btn-teilen">Link teilen</button>
+      <button type="button" id="btn-zuruecksetzen">Alles zurücksetzen</button>
+    </div>
+  </header>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+
+  <nav class="tabs" role="tablist" aria-label="Ansichten">
+    <button type="button" role="tab" id="tab-rechner" aria-controls="panel-rechner" aria-selected="true" tabindex="0">Rechner</button>
+    <button type="button" role="tab" id="tab-vergleich" aria-controls="panel-vergleich" aria-selected="false" tabindex="-1">Vergleich</button>
+    <button type="button" role="tab" id="tab-leistbarkeit" aria-controls="panel-leistbarkeit" aria-selected="false" tabindex="-1">Leistbarkeit</button>
+  </nav>
+
+  <main>
+    <!-- Tab Rechner -->
+    <section id="panel-rechner" role="tabpanel" aria-labelledby="tab-rechner" class="panel">
+      <div class="szenario-leiste" role="group" aria-label="Szenarien verwalten">
+        <label for="szenario-auswahl">Aktives Szenario</label>
+        <select id="szenario-auswahl"></select>
+        <button type="button" id="btn-neu">Neu</button>
+        <button type="button" id="btn-duplizieren">Duplizieren</button>
+        <button type="button" id="btn-umbenennen">Umbenennen</button>
+        <button type="button" id="btn-loeschen">Löschen</button>
+      </div>
+
+      <div class="rechner-raster">
+        <form id="eingaben" class="eingaben">
+          <fieldset>
+            <legend>Objekt</legend>
+            <div class="feld">
+              <label for="kaufpreis">Kaufpreis (€)</label>
+              <input type="number" id="kaufpreis" min="0" step="1000" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="bundesland">Bundesland</label>
+              <select id="bundesland"></select>
+            </div>
+            <div class="feld">
+              <label for="modernisierung">Modernisierung (€)</label>
+              <input type="number" id="modernisierung" min="0" step="1000" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Kaufnebenkosten</legend>
+            <div class="feld">
+              <label for="grest">Grunderwerbsteuer (%)</label>
+              <input type="number" id="grest" min="0" step="0.01" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="notar">Notar &amp; Grundbuch (%)</label>
+              <input type="number" id="notar" min="0" step="0.01" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="makler">Makler (%)</label>
+              <input type="number" id="makler" min="0" step="0.01" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Eigenkapital</legend>
+            <div class="feld">
+              <label for="eigenkapital">Eigenkapital (€)</label>
+              <input type="number" id="eigenkapital" min="0" step="1000" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Darlehen</legend>
+            <div class="feld">
+              <label for="zins">Sollzins (%)</label>
+              <input type="number" id="zins" min="0" step="0.01" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="tilgung">Anfängliche Tilgung (%)</label>
+              <input type="number" id="tilgung" min="0" step="0.01" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="zinsbindung">Zinsbindung (Jahre)</label>
+              <select id="zinsbindung">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+              </select>
+            </div>
+            <div class="feld">
+              <label for="sondertilgung">Sondertilgung (€ pro Jahr)</label>
+              <input type="number" id="sondertilgung" min="0" step="100" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Anschlussfinanzierung</legend>
+            <div class="feld">
+              <label for="anschlusszins">Anschlusszins (%)</label>
+              <input type="number" id="anschlusszins" min="0" step="0.01" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="anschlusstilgung">Tilgung danach (%)</label>
+              <input type="number" id="anschlusstilgung" min="0" step="0.01" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>KfW / zweites Darlehen</legend>
+            <div class="feld feld-check">
+              <input type="checkbox" id="kfw-aktiv">
+              <label for="kfw-aktiv">KfW-Darlehen berücksichtigen</label>
+            </div>
+            <div id="kfw-felder" hidden>
+              <div class="feld">
+                <label for="kfw-betrag">Betrag (€)</label>
+                <input type="number" id="kfw-betrag" min="0" step="1000" inputmode="decimal">
+              </div>
+              <div class="feld">
+                <label for="kfw-zins">Sollzins (%)</label>
+                <input type="number" id="kfw-zins" min="0" step="0.01" inputmode="decimal">
+              </div>
+              <div class="feld">
+                <label for="kfw-tilgung">Tilgung (%)</label>
+                <input type="number" id="kfw-tilgung" min="0" step="0.01" inputmode="decimal">
+              </div>
+              <div class="feld">
+                <label for="kfw-zinsbindung">Zinsbindung (Jahre)</label>
+                <select id="kfw-zinsbindung">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="25">25</option>
+                  <option value="30">30</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="ergebnisse">
+          <div class="kacheln">
+            <div class="kachel kachel-rate">
+              <span class="kachel-titel">Monatsrate</span>
+              <span class="kachel-wert gross" id="out-rate">–</span>
+              <span class="kachel-hinweis" id="out-rate-hinweis"></span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Darlehenssumme</span>
+              <span class="kachel-wert" id="out-darlehen">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Kaufnebenkosten</span>
+              <span class="kachel-wert" id="out-nk">–</span>
+              <ul class="aufschluesselung" id="out-nk-liste"></ul>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Restschuld nach Zinsbindung</span>
+              <span class="kachel-wert" id="out-restschuld">–</span>
+              <span class="kachel-hinweis">Bankdarlehen</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Anschlussrate</span>
+              <span class="kachel-wert" id="out-anschlussrate">–</span>
+              <span class="kachel-hinweis">Bankdarlehen</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Gesamtlaufzeit</span>
+              <span class="kachel-wert" id="out-laufzeit">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Gesamtzinsen</span>
+              <span class="kachel-wert" id="out-zinsen">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Beleihungsauslauf</span>
+              <span class="kachel-wert" id="out-beleihung">–</span>
+              <span class="kachel-hinweis" id="out-beleihung-hinweis"></span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Eigenkapitalquote</span>
+              <span class="kachel-wert" id="out-ek-quote">–</span>
+            </div>
+          </div>
+
+          <p class="warnung" id="warnung-tilgbar" role="alert" hidden>Rate deckt die Zinsen nicht – Darlehen wird nie getilgt.</p>
+
+          <section class="karte">
+            <h2>Was, wenn der Anschlusszins 3 bis 7 % ist?</h2>
+            <div class="tabelle-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Anschlusszins</th>
+                    <th scope="col">Anschlussrate</th>
+                    <th scope="col">Gesamtzinsen (Bank)</th>
+                    <th scope="col">Laufzeit</th>
+                  </tr>
+                </thead>
+                <tbody id="stress-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="karte">
+            <h2>Restschuld je Jahr</h2>
+            <div id="diagramm-rechner"></div>
+          </section>
+
+          <details class="karte tilgungsplan">
+            <summary>Tilgungsplan Bankdarlehen</summary>
+            <div class="tabelle-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Jahr</th>
+                    <th scope="col">Zinsen</th>
+                    <th scope="col">Tilgung</th>
+                    <th scope="col">Sondertilgung</th>
+                    <th scope="col">Restschuld</th>
+                  </tr>
+                </thead>
+                <tbody id="tilgung-bank-body"></tbody>
+              </table>
+            </div>
+          </details>
+
+          <details class="karte tilgungsplan" id="kfw-plan-box" hidden>
+            <summary>Tilgungsplan KfW-Darlehen</summary>
+            <div class="tabelle-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Jahr</th>
+                    <th scope="col">Zinsen</th>
+                    <th scope="col">Tilgung</th>
+                    <th scope="col">Sondertilgung</th>
+                    <th scope="col">Restschuld</th>
+                  </tr>
+                </thead>
+                <tbody id="tilgung-kfw-body"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab Vergleich -->
+    <section id="panel-vergleich" role="tabpanel" aria-labelledby="tab-vergleich" class="panel" hidden>
+      <div class="tabelle-wrapper">
+        <table class="vergleich">
+          <thead>
+            <tr id="vergleich-kopf">
+              <th scope="col">Kennzahl</th>
+            </tr>
+          </thead>
+          <tbody id="vergleich-body"></tbody>
+        </table>
+      </div>
+      <p class="hinweis">Beste Werte (Monatsrate, Gesamtzinsen, Restschuld) sind hervorgehoben: je kleiner, desto besser.</p>
+      <section class="karte">
+        <h2>Restschuld aller Szenarien</h2>
+        <div id="legende-vergleich" class="legende"></div>
+        <div id="diagramm-vergleich"></div>
+      </section>
+    </section>
+
+    <!-- Tab Leistbarkeit -->
+    <section id="panel-leistbarkeit" role="tabpanel" aria-labelledby="tab-leistbarkeit" class="panel" hidden>
+      <div class="rechner-raster">
+        <form id="haushalt" class="eingaben">
+          <fieldset>
+            <legend>Einnahmen</legend>
+            <div class="feld">
+              <label for="netto1">Netto Person 1 (€)</label>
+              <input type="number" id="netto1" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="netto2">Netto Person 2 (€)</label>
+              <input type="number" id="netto2" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="sonstige">Sonstige Einnahmen (€)</label>
+              <input type="number" id="sonstige" min="0" step="50" inputmode="decimal">
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Ausgaben</legend>
+            <div class="feld">
+              <label for="lebenshaltung">Lebenshaltung (€)</label>
+              <input type="number" id="lebenshaltung" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="fixkosten">Fixkosten (Versicherungen, Auto, Kredite) (€)</label>
+              <input type="number" id="fixkosten" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="bewirtschaftung">Bewirtschaftung Immobilie (Hausgeld/Instandhaltung) (€)</label>
+              <input type="number" id="bewirtschaftung" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="puffer">Puffer (€)</label>
+              <input type="number" id="puffer" min="0" step="50" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="maxquote">Max. Rate-Quote (%)</label>
+              <input type="number" id="maxquote" min="0" max="100" step="1" inputmode="decimal">
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="ergebnisse">
+          <p class="hinweis">Zins, Tilgung, Eigenkapital und Nebenkostenquote kommen aus dem aktiven Szenario: <strong id="leist-szenario"></strong></p>
+          <div class="kacheln">
+            <div class="kachel">
+              <span class="kachel-titel">Freie Rate</span>
+              <span class="kachel-wert" id="leist-frei">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Rate laut Quote</span>
+              <span class="kachel-wert" id="leist-quote">–</span>
+            </div>
+            <div class="kachel kachel-rate">
+              <span class="kachel-titel">Maximal tragbare Rate</span>
+              <span class="kachel-wert gross" id="leist-maxrate">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Maximales Darlehen</span>
+              <span class="kachel-wert" id="leist-maxdarlehen">–</span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Maximaler Kaufpreis</span>
+              <span class="kachel-wert" id="leist-maxkaufpreis">–</span>
+            </div>
+          </div>
+          <div class="ampel" id="leist-ampel" role="status">
+            <span class="ampel-wert" id="leist-ampel-wert">–</span>
+            <span id="leist-ampel-text"></span>
+          </div>
+          <p>
+            <button type="button" id="btn-kaufpreis-uebernehmen">Kaufpreis ins Szenario übernehmen</button>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="fuss">
+    <p>Unverbindliche Modellrechnung, keine Finanzberatung. Sollzins, kein Effektivzins.</p>
+  </footer>
+
+  <script src="js/calc.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
