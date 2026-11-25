@@ -7,14 +7,15 @@ Ein privater Baufinanzierungsrechner für Deutschland als statische Web-App
 
 - **Rechner:** Kaufnebenkosten (Grunderwerbsteuer für Baden-Württemberg (5,0 %, änderbar), Notar und Grundbuch, Makler),
   Darlehenssumme, Monatsrate, Restschuld nach Zinsbindung, Anschlussrate, Gesamtlaufzeit,
-  Gesamtzinsen, Beleihungsauslauf und Eigenkapitalquote.
+  Gesamtzinsen, Beleihungsauslauf und Eigenkapitalquote. Dazu Effektivzins (Bankdarlehen, inkl. einmaliger Kreditkosten),
+  laufende Kosten der Immobilie (Haus oder Wohnung) und die monatliche Gesamtbelastung.
 - **Tilgungsplan:** Jahresübersicht mit Zinsen, Tilgung, Sondertilgung und Restschuld,
   Phase-2-Zeilen nach Ende der Zinsbindung abgesetzt. Bei aktivem KfW-Darlehen eine zweite Tabelle.
 - **Stresstest:** Anschlussrate, Gesamtzinsen und Laufzeit für Anschlusszinsen von 3 bis 7 %.
 - **Szenarien:** bis zu 6 Szenarien nebeneinander, Tab **Vergleich** mit bestem Wert je Kennzahl
   und Diagramm der Restschuld aller Szenarien.
 - **Leistbarkeit:** freie Rate, tragbare Rate laut Quote, maximales Darlehen und maximaler Kaufpreis
-  aus dem Haushalt. Ampel für das aktive Szenario (grün bis 30 %, gelb bis 40 %, darüber rot).
+  aus dem Haushalt. Die laufenden Kosten kommen aus dem aktiven Szenario. Ampel für das aktive Szenario (grün bis 30 %, gelb bis 40 %, darüber rot).
   Der Button übernimmt den maximalen Kaufpreis (auf 1000 € abgerundet) in das aktive Szenario.
 - **Speichern:** Alles wird im Browser (localStorage) gehalten. Export und Import als JSON-Datei,
   Teilen-Link mit den Daten eines Szenarios in der URL.
@@ -56,7 +57,16 @@ Alle Pfade in der App sind relativ, deshalb funktioniert sie sowohl per `file://
 - Ist die Rate nicht höher als der erste Monatszins, wird das Darlehen nie getilgt; die App zeigt dann eine Warnung.
 - KfW-Darlehen: eigener Plan mit eigenem Zins, eigener Tilgung und eigener Zinsbindung, ohne Sondertilgung.
   Die Anschlussrate, die Restschuld nach Zinsbindung und der Stresstest beziehen sich auf das Bankdarlehen.
-- Sollzins, kein Effektivzins. Der Grunderwerbsteuersatz (Baden-Württemberg, 5,0 %) ist Stand der Vorlage und kann im Feld
+- Effektivzins (PAngV-Methode, monatliche Zahlungen): nur für das Bankdarlehen, über die Zinsbindung berechnet.
+  Zahlungsreihe wie oben (Rate, Sondertilgung am Monatsende 12, 24, …, im letzten Zinsbindungsmonat zusätzlich die
+  Restschuld). Der monatliche Zinssatz i wird per Bisektion so bestimmt, dass der Barwert der Zahlungen der Auszahlung
+  (Darlehen minus einmalige Kreditkosten) entspricht; ausgewiesen wird `(1 + i)^12 − 1`. Das ist eine Annäherung an
+  die Bankangabe: Nach der Zinsbindung, beim KfW-Darlehen und bei weiteren Kosten wird nichts berücksichtigt.
+- Laufende Kosten je Szenario, als Monatsbetrag und in die Leistbarkeit eingerechnet:
+  Haus = Wohnfläche × Nebenkosten (€/m²/Monat) + Wohnfläche × Instandhaltungsrücklage (€/m²/Jahr) / 12;
+  Wohnung = Hausgeld + Sonstiges (Rücklage ist im Hausgeld enthalten).
+  Monatliche Gesamtbelastung = Monatsrate + laufende Kosten.
+- Der Grunderwerbsteuersatz (Baden-Württemberg, 5,0 %) ist Stand der Vorlage und kann im Feld
   überschrieben werden.
 - Alle Beträge werden ungerundet gerechnet; gerundet wird nur in der Anzeige.
 
@@ -68,7 +78,7 @@ Adresse und wird nicht an einen Server übertragen.
 
 ## Hinweis
 
-Unverbindliche Modellrechnung, keine Finanzberatung. Sollzins, kein Effektivzins.
+Unverbindliche Modellrechnung, keine Finanzberatung. Effektivzins nur für das Bankdarlehen, als Annäherung an die Bankangabe.
 
 ## Dateien
 

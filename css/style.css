@@ -304,6 +304,72 @@ legend {
   color: var(--text-muted);
 }
 
+.kachel-paar {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  min-width: 0;
+}
+
+.kachel-paar > .kachel-rate {
+  grid-column: auto;
+}
+
+.feld-titel {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--akzent);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segment-option {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+.segment-option input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.segment-option span {
+  display: block;
+  text-align: center;
+  padding: 0.55rem 0.5rem;
+  min-height: 2.5rem;
+  color: var(--text);
+  background: var(--flaeche);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment-option + .segment-option span {
+  border-left: 1px solid var(--akzent);
+}
+
+.segment-option input:checked + span {
+  background: var(--akzent);
+  color: var(--akzent-text);
+}
+
+.segment-option input:focus-visible + span {
+  outline: 3px solid var(--fokus);
+  outline-offset: -3px;
+}
+
 .aufschluesselung {
   margin: 0.3rem 0 0;
   padding-left: 1rem;
@@ -424,6 +490,10 @@ tr.phase2-beginn td {
 .ampel-wert {
   font-size: 1.3rem;
   font-weight: 700;
+}
+
+#leist-gesamt {
+  font-weight: 600;
 }
 
 .ampel-gruen {

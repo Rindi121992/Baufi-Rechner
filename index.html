@@ -56,6 +56,51 @@
           </fieldset>
 
           <fieldset>
+            <legend>Laufende Kosten der Immobilie</legend>
+            <div class="feld">
+              <span class="feld-titel" id="objektart-titel">Objektart</span>
+              <div class="segment" role="radiogroup" aria-labelledby="objektart-titel">
+                <label class="segment-option">
+                  <input type="radio" name="objektart" id="objektart-haus" value="haus">
+                  <span>Haus</span>
+                </label>
+                <label class="segment-option">
+                  <input type="radio" name="objektart" id="objektart-wohnung" value="wohnung">
+                  <span>Wohnung</span>
+                </label>
+              </div>
+            </div>
+            <div class="feld">
+              <label for="wohnflaeche">Wohnfläche (m²)</label>
+              <input type="number" id="wohnflaeche" min="0" step="1" inputmode="decimal">
+            </div>
+            <div id="haus-felder">
+              <div class="feld">
+                <label for="nebenkosten-qm">Nebenkosten (€/m²/Monat)</label>
+                <input type="number" id="nebenkosten-qm" min="0" step="0.1" inputmode="decimal">
+                <p class="hinweis">Grundsteuer, Versicherung, Wasser, Müll, Heizung und Strom Allgemein.</p>
+              </div>
+              <div class="feld">
+                <label for="instandhaltung-qm">Instandhaltungsrücklage (€/m²/Jahr)</label>
+                <input type="number" id="instandhaltung-qm" min="0" step="1" inputmode="decimal">
+                <p class="hinweis">Faustregel: 10–20 €/m² im Jahr, bei älteren Häusern mehr.</p>
+              </div>
+            </div>
+            <div id="wohnung-felder" hidden>
+              <div class="feld">
+                <label for="hausgeld">Hausgeld (€/Monat)</label>
+                <input type="number" id="hausgeld" min="0" step="10" inputmode="decimal">
+                <p class="hinweis">inkl. Instandhaltungsrücklage</p>
+              </div>
+              <div class="feld">
+                <label for="wohnung-sonstiges">Sonstiges (€/Monat)</label>
+                <input type="number" id="wohnung-sonstiges" min="0" step="10" inputmode="decimal">
+                <p class="hinweis">Grundsteuer, Heizung und Strom, soweit nicht im Hausgeld.</p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
             <legend>Kaufnebenkosten</legend>
             <div class="feld">
               <label for="grest">Grunderwerbsteuer Baden-Württemberg (%)</label>
@@ -104,6 +149,11 @@
             <div class="feld">
               <label for="sondertilgung">Sondertilgung (€ pro Jahr)</label>
               <input type="number" id="sondertilgung" min="0" step="100" inputmode="decimal">
+            </div>
+            <div class="feld">
+              <label for="einmalkosten">Einmalige Kreditkosten (€)</label>
+              <input type="number" id="einmalkosten" min="0" step="100" inputmode="decimal" aria-describedby="einmalkosten-hinweis">
+              <p class="hinweis" id="einmalkosten-hinweis">z. B. Schätzgebühr, Bereitstellungszinsen – erhöht den Effektivzins</p>
             </div>
           </fieldset>
 
@@ -155,10 +205,27 @@
 
         <div class="ergebnisse">
           <div class="kacheln">
-            <div class="kachel kachel-rate">
-              <span class="kachel-titel">Monatsrate</span>
-              <span class="kachel-wert gross" id="out-rate">–</span>
-              <span class="kachel-hinweis" id="out-rate-hinweis"></span>
+            <div class="kachel-paar">
+              <div class="kachel kachel-rate">
+                <span class="kachel-titel">Monatsrate</span>
+                <span class="kachel-wert gross" id="out-rate">–</span>
+                <span class="kachel-hinweis" id="out-rate-hinweis"></span>
+              </div>
+              <div class="kachel kachel-rate">
+                <span class="kachel-titel">Monatliche Gesamtbelastung</span>
+                <span class="kachel-wert gross" id="out-gesamt">–</span>
+                <span class="kachel-hinweis">Rate + laufende Kosten</span>
+              </div>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Effektivzins</span>
+              <span class="kachel-wert" id="out-effektivzins">–</span>
+              <span class="kachel-hinweis" id="out-sollzins"></span>
+            </div>
+            <div class="kachel">
+              <span class="kachel-titel">Laufende Kosten</span>
+              <span class="kachel-wert" id="out-bew">–</span>
+              <span class="kachel-hinweis" id="out-bew-hinweis"></span>
             </div>
             <div class="kachel">
               <span class="kachel-titel">Darlehenssumme</span>
@@ -273,7 +340,7 @@
           <tbody id="vergleich-body"></tbody>
         </table>
       </div>
-      <p class="hinweis">Beste Werte (Monatsrate, Gesamtzinsen, Restschuld) sind hervorgehoben: je kleiner, desto besser.</p>
+      <p class="hinweis">Beste Werte (Monatsrate, Gesamtbelastung, Gesamtzinsen, Restschuld) sind hervorgehoben: je kleiner, desto besser.</p>
       <section class="karte">
         <h2>Restschuld aller Szenarien</h2>
         <div id="legende-vergleich" class="legende"></div>
@@ -311,10 +378,6 @@
               <input type="number" id="fixkosten" min="0" step="50" inputmode="decimal">
             </div>
             <div class="feld">
-              <label for="bewirtschaftung">Bewirtschaftung Immobilie (Hausgeld/Instandhaltung) (€)</label>
-              <input type="number" id="bewirtschaftung" min="0" step="50" inputmode="decimal">
-            </div>
-            <div class="feld">
               <label for="puffer">Puffer (€)</label>
               <input type="number" id="puffer" min="0" step="50" inputmode="decimal">
             </div>
@@ -326,7 +389,8 @@
         </form>
 
         <div class="ergebnisse">
-          <p class="hinweis">Zins, Tilgung, Eigenkapital und Nebenkostenquote kommen aus dem aktiven Szenario: <strong id="leist-szenario"></strong></p>
+          <p class="hinweis">Zins, Tilgung, Eigenkapital, Nebenkostenquote und laufende Kosten kommen aus dem aktiven Szenario: <strong id="leist-szenario"></strong></p>
+          <p class="hinweis" id="leist-bewirtschaftung">Laufende Kosten (aus Szenario „<span id="leist-bew-szenario"></span>“): <strong id="leist-bew">–</strong></p>
           <div class="kacheln">
             <div class="kachel">
               <span class="kachel-titel">Freie Rate</span>
@@ -352,6 +416,7 @@
           <div class="ampel" id="leist-ampel" role="status">
             <span class="ampel-wert" id="leist-ampel-wert">–</span>
             <span id="leist-ampel-text"></span>
+            <span id="leist-gesamt"></span>
           </div>
           <p>
             <button type="button" id="btn-kaufpreis-uebernehmen">Kaufpreis ins Szenario übernehmen</button>
@@ -362,7 +427,7 @@
   </main>
 
   <footer class="fuss">
-    <p>Unverbindliche Modellrechnung, keine Finanzberatung. Sollzins, kein Effektivzins.</p>
+    <p>Unverbindliche Modellrechnung, keine Finanzberatung. Effektivzins nur für das Bankdarlehen, als Annäherung an die Bankangabe.</p>
   </footer>
 
   <script src="js/calc.js"></script>

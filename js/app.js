@@ -75,6 +75,7 @@
       out.grunderwerbsteuerSatz = C.GRUNDERWERBSTEUER_BW;
     }
     delete out.bundesland;
+    if (out.objektart !== 'wohnung') out.objektart = 'haus';
     return out;
   }
 
@@ -100,11 +101,13 @@
     const szenarien = (z.szenarien || []).filter(function (s) { return s && typeof s === 'object'; })
       .map(vervollstaendigeSzenario);
     if (!szenarien.length) return standardZustand();
+    const haushalt = Object.assign(clone(C.HAUSHALT_DEFAULTS), z.haushalt || {});
+    delete haushalt.bewirtschaftung; // Altdaten: laufende Kosten kommen jetzt aus dem Szenario
     const out = {
       version: 1,
       szenarien: szenarien,
       aktivId: z.aktivId,
-      haushalt: Object.assign(clone(C.HAUSHALT_DEFAULTS), z.haushalt || {})
+      haushalt: haushalt
     };
     if (!szenarien.some(function (s) { return s.id === out.aktivId; })) out.aktivId = szenarien[0].id;
     return out;
@@ -141,6 +144,11 @@
 
   // ---------- Formular lesen/schreiben ----------
 
+  function zeigeObjektFelder(objektart) {
+    $('haus-felder').hidden = objektart === 'wohnung';
+    $('wohnung-felder').hidden = objektart !== 'wohnung';
+  }
+
   function schreibeFormular() {
     const e = aktiv().eingaben;
     setVal('kaufpreis', e.kaufpreis);
@@ -153,6 +161,14 @@
     setVal('tilgung', e.tilgung);
     setVal('zinsbindung', e.zinsbindungJahre);
     setVal('sondertilgung', e.sondertilgungJahr);
+    setVal('einmalkosten', e.einmalkosten);
+    $(e.objektart === 'wohnung' ? 'objektart-wohnung' : 'objektart-haus').checked = true;
+    zeigeObjektFelder(e.objektart);
+    setVal('wohnflaeche', e.wohnflaeche);
+    setVal('nebenkosten-qm', e.nebenkostenQm);
+    setVal('instandhaltung-qm', e.instandhaltungQmJahr);
+    setVal('hausgeld', e.hausgeld);
+    setVal('wohnung-sonstiges', e.wohnungSonstiges);
     setVal('anschlusszins', e.anschlusszins);
     setVal('anschlusstilgung', e.anschlussTilgung);
     $('kfw-aktiv').checked = !!e.kfw.aktiv;
@@ -168,7 +184,6 @@
     setVal('sonstige', h.sonstigeEinnahmen);
     setVal('lebenshaltung', h.lebenshaltung);
     setVal('fixkosten', h.fixkosten);
-    setVal('bewirtschaftung', h.bewirtschaftung);
     setVal('puffer', h.puffer);
     setVal('maxquote', h.maxQuote);
   }
@@ -185,6 +200,13 @@
     e.tilgung = feldZahl('tilgung');
     e.zinsbindungJahre = Number($('zinsbindung').value);
     e.sondertilgungJahr = feldZahl('sondertilgung');
+    e.einmalkosten = feldZahl('einmalkosten');
+    e.objektart = $('objektart-wohnung').checked ? 'wohnung' : 'haus';
+    e.wohnflaeche = feldZahl('wohnflaeche');
+    e.nebenkostenQm = feldZahl('nebenkosten-qm');
+    e.instandhaltungQmJahr = feldZahl('instandhaltung-qm');
+    e.hausgeld = feldZahl('hausgeld');
+    e.wohnungSonstiges = feldZahl('wohnung-sonstiges');
     e.anschlusszins = feldZahl('anschlusszins');
     e.anschlussTilgung = feldZahl('anschlusstilgung');
     e.kfw = {
@@ -203,7 +225,6 @@
       sonstigeEinnahmen: feldZahl('sonstige'),
       lebenshaltung: feldZahl('lebenshaltung'),
       fixkosten: feldZahl('fixkosten'),
-      bewirtschaftung: feldZahl('bewirtschaftung'),
       puffer: feldZahl('puffer'),
       maxQuote: feldZahl('maxquote')
     };
@@ -242,6 +263,16 @@
     $('out-rate-hinweis').textContent = k
       ? 'Bank ' + eur2.format(b.rate) + ' · KfW ' + eur2.format(k.rate)
       : 'Bankdarlehen, Annuität';
+    $('out-gesamt').textContent = eur2.format(f.belastungGesamt);
+    $('out-effektivzins').textContent = pct(f.effektivzins, 2);
+    $('out-sollzins').textContent = 'Bankdarlehen · Sollzins ' + pct(e.zins, 2);
+
+    const bew = f.bewirtschaftung;
+    $('out-bew').textContent = eur0.format(bew.summe) + ' / Monat';
+    $('out-bew-hinweis').textContent = e.objektart === 'wohnung'
+      ? 'Hausgeld und Sonstiges ' + eur0.format(bew.nebenkosten) + ' (Rücklage im Hausgeld)'
+      : 'Nebenkosten ' + eur0.format(bew.nebenkosten) + ' · Rücklage ' + eur0.format(bew.ruecklage);
+
     $('out-darlehen').textContent = eur0.format(f.darlehenGesamt);
     $('out-nk').textContent = eur0.format(nk.summe);
 
@@ -315,9 +346,12 @@
       { label: 'Kaufnebenkosten', wert: function (s, f) { return eur0.format(f.nebenkosten.summe); } },
       { label: 'Darlehen', wert: function (s, f) { return eur0.format(f.darlehenGesamt); } },
       { label: 'Sollzins', wert: function (s) { return pct(s.eingaben.zins, 2); } },
+      { label: 'Effektivzins', wert: function (s, f) { return pct(f.effektivzins, 2); } },
       { label: 'Tilgung', wert: function (s) { return pct(s.eingaben.tilgung, 2); } },
       { label: 'Zinsbindung', wert: function (s) { return s.eingaben.zinsbindungJahre + ' Jahre'; } },
       { label: 'Monatsrate', wert: function (s, f) { return eur2.format(f.rateGesamt); }, zahl: function (f) { return f.rateGesamt; } },
+      { label: 'Laufende Kosten', wert: function (s, f) { return eur0.format(f.bewirtschaftung.summe) + ' / Monat'; } },
+      { label: 'Gesamtbelastung', wert: function (s, f) { return eur2.format(f.belastungGesamt); }, zahl: function (f) { return f.belastungGesamt; } },
       { label: 'Restschuld nach Zinsbindung', wert: function (s, f) { return eur0.format(f.restschuldZinsbindung); }, zahl: function (f) { return f.restschuldZinsbindung; } },
       { label: 'Anschlussrate', wert: function (s, f) { return f.bank.anschlussrate > 0 ? eur2.format(f.bank.anschlussrate) : '–'; } },
       { label: 'Gesamtlaufzeit', wert: function (s, f) { return jahreMonate(Math.max(f.bank.laufzeitMonate, f.kfw ? f.kfw.laufzeitMonate : 0)); } },
@@ -392,7 +426,8 @@
       zins: e.zins,
       tilgung: e.tilgung,
       eigenkapital: e.eigenkapital,
-      nebenkostenQuote: f.nebenkosten.quote
+      nebenkostenQuote: f.nebenkosten.quote,
+      bewirtschaftung: f.bewirtschaftung.summe
     }));
     return { l: l, f: f };
   }
@@ -405,6 +440,8 @@
     $('leist-maxrate').textContent = eur0.format(l.maxRate);
     $('leist-maxdarlehen').textContent = eur0.format(l.maxDarlehen);
     $('leist-maxkaufpreis').textContent = eur0.format(l.maxKaufpreis);
+    $('leist-bew-szenario').textContent = aktiv().name;
+    $('leist-bew').textContent = eur0.format(f.bewirtschaftung.summe) + '/Monat';
 
     const amp = C.ampel(f.rateGesamt, l.einnahmen);
     const quote = l.einnahmen > 0 ? f.rateGesamt / l.einnahmen * 100 : null;
@@ -416,6 +453,10 @@
     else if (amp === 'gelb') text = 'Angespannt: die Rate liegt zwischen 30 und 40 % der Einnahmen.';
     else text = 'Zu hoch: die Rate liegt über 40 % der Einnahmen oder es gibt keine Einnahmen.';
     $('leist-ampel-text').textContent = text;
+
+    const gesamtQuote = l.einnahmen > 0 ? f.belastungGesamt / l.einnahmen * 100 : null;
+    $('leist-gesamt').textContent = 'Gesamtbelastung ' + eur0.format(f.belastungGesamt) + ' = ' +
+      (gesamtQuote === null ? '–' : pct(gesamtQuote, 1) + ' der Einnahmen');
 
     $('btn-kaufpreis-uebernehmen').disabled = !(Math.floor(l.maxKaufpreis / 1000) * 1000 > 0);
   }
@@ -448,6 +489,7 @@
       $('kfw-felder').hidden = !$('kfw-aktiv').checked;
     }
     leseFormular();
+    zeigeObjektFelder(aktiv().eingaben.objektart);
     renderAlles();
     speichereVerzoegert();
   }

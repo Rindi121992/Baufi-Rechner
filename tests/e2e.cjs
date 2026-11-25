@@ -71,6 +71,35 @@ async function main() {
     const maxKp = await page.textContent('#leist-maxkaufpreis');
     pruefe('Leistbarkeit zeigt maximalen Kaufpreis', /\d/.test(maxKp) && maxKp !== '–', 'Anzeige: ' + maxKp);
 
+    // Effektivzins, laufende Kosten, Gesamtbelastung
+    await page.click('#tab-rechner');
+    const ezText = await page.textContent('#out-effektivzins');
+    pruefe('Kachel Effektivzins sichtbar mit %', /%/.test(ezText), 'Anzeige: ' + ezText);
+    const gesamtHaus = await page.textContent('#out-gesamt');
+    const hausSichtbarVorher = await page.isVisible('#haus-felder');
+    const wohnungVorher = await page.isVisible('#wohnung-felder');
+    pruefe('Objekt Haus: Haus-Felder sichtbar, Wohnungsfelder ausgeblendet', hausSichtbarVorher && !wohnungVorher);
+    await page.locator('label.segment-option', { has: page.locator('#objektart-wohnung') }).click();
+    const hausNachWechsel = await page.isVisible('#haus-felder');
+    const wohnungNachWechsel = await page.isVisible('#wohnung-felder');
+    pruefe('Umschalten auf Wohnung blendet Haus-Felder aus und Wohnungsfelder ein',
+      !hausNachWechsel && wohnungNachWechsel);
+    const gesamtWohnung = await page.textContent('#out-gesamt');
+    pruefe('Umschalten auf Wohnung ändert Gesamtbelastung', gesamtWohnung !== gesamtHaus,
+      'Haus ' + gesamtHaus + ', Wohnung ' + gesamtWohnung);
+
+    await page.click('#tab-leistbarkeit');
+    const bewInput = await page.$('#bewirtschaftung');
+    pruefe('Leistbarkeit hat kein Eingabefeld #bewirtschaftung', bewInput === null);
+    const bewText = await page.textContent('#leist-bew');
+    pruefe('Leistbarkeit zeigt laufende Kosten des Szenarios', /480/.test(bewText), 'Anzeige: ' + bewText);
+    await page.click('#tab-vergleich');
+    const vergleichZeilen = await page.$$eval('#vergleich-body th', (ths) => ths.map((t) => t.textContent));
+    pruefe('Vergleich enthält Zeile Gesamtbelastung', vergleichZeilen.indexOf('Gesamtbelastung') !== -1,
+      'Zeilen: ' + vergleichZeilen.length);
+    await page.click('#tab-rechner');
+    await page.locator('label.segment-option', { has: page.locator('#objektart-haus') }).click();
+
     // Teilen-Link-Roundtrip mit Umlauten (im Browser-Kontext)
     const roundtrip = await page.evaluate(() => {
       const s = { id: 'x1', name: 'Küche größer – Müller & Söhne', eingaben: { kaufpreis: 123456 } };
@@ -103,7 +132,7 @@ async function main() {
         version: 1,
         szenarien: [{ id: 'alt1', name: 'Altes Szenario', eingaben: { kaufpreis: 450000, bundesland: 'NW', grunderwerbsteuerSatz: 6.5 } }],
         aktivId: 'alt1',
-        haushalt: {}
+        haushalt: { bewirtschaftung: 350 }
       };
       localStorage.setItem('baufi.v1', JSON.stringify(altes));
     });
@@ -114,6 +143,11 @@ async function main() {
     const gespeichert = await altPage.evaluate(() => JSON.parse(localStorage.getItem('baufi.v1')));
     const altesEingaben = gespeichert.szenarien[0].eingaben;
     pruefe('Altdaten: Feld bundesland gelöscht', !('bundesland' in altesEingaben), 'Felder: ' + Object.keys(altesEingaben).length);
+    pruefe('Altdaten: haushalt.bewirtschaftung gelöscht', !('bewirtschaftung' in gespeichert.haushalt),
+      'Felder: ' + Object.keys(gespeichert.haushalt).join(', '));
+    pruefe('Altdaten: neue Felder mit Defaults gefüllt', altesEingaben.objektart === 'haus' && altesEingaben.wohnflaeche === 120 &&
+      altesEingaben.einmalkosten === 0, 'objektart ' + altesEingaben.objektart);
+    pruefe('Altdaten: Effektivzins angezeigt', /%/.test(await altPage.textContent('#out-effektivzins')));
     pruefe('Altdaten-Lauf ohne Konsolenfehler', altFehler.length === 0, altFehler.join(' | ').slice(0, 300));
     await altCtx.close();
 
@@ -130,6 +164,9 @@ async function main() {
     breiten.vergleich = await mp.evaluate(() => document.documentElement.scrollWidth);
     await mp.click('#tab-leistbarkeit');
     breiten.leistbarkeit = await mp.evaluate(() => document.documentElement.scrollWidth);
+    await mp.click('#tab-rechner');
+    await mp.locator('label.segment-option', { has: mp.locator('#objektart-wohnung') }).click();
+    breiten.rechnerWohnung = await mp.evaluate(() => document.documentElement.scrollWidth);
     const mobilOk = Object.values(breiten).every((w) => w <= 375);
     pruefe('Mobil 375 px: kein horizontales Scrollen', mobilOk, JSON.stringify(breiten));
     pruefe('Mobil-Lauf ohne Seitenfehler', mobilFehler.length === 0, mobilFehler.join(' | '));

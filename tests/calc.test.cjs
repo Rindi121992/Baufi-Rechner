@@ -131,3 +131,43 @@ test('Leistbarkeit ohne Einnahmen liefert keine negative freie Rate', () => {
   assert.strictEqual(l.maxRate, 0);
   assert.strictEqual(l.maxDarlehen, 0);
 });
+
+test('E1: effektivzins Referenzfall ohne Einmalkosten (4,0742 %)', () => {
+  const ez = C.effektivzins({ betrag: 300000, zins: 4, tilgung: 2, zinsbindungJahre: 10, sondertilgungJahr: 0, einmalkosten: 0 });
+  nah(ez, 4.0742, 0.001, 'effektivzins');
+});
+
+test('E2: effektivzins mit Einmalkosten 3000 € (4,2160 %)', () => {
+  const ez = C.effektivzins({ betrag: 300000, zins: 4, tilgung: 2, zinsbindungJahre: 10, sondertilgungJahr: 0, einmalkosten: 3000 });
+  nah(ez, 4.2160, 0.002, 'effektivzins');
+});
+
+test('E3: effektivzins 15 Jahre Zinsbindung (3,6600 %), betrag 0 ergibt 0', () => {
+  nah(C.effektivzins({ betrag: 300000, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, einmalkosten: 0 }), 3.66, 0.001, 'effektivzins');
+  assert.strictEqual(C.effektivzins({ betrag: 0, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, einmalkosten: 0 }), 0);
+});
+
+test('E4: bewirtschaftung Haus und Wohnung', () => {
+  const haus = C.bewirtschaftung({ objektart: 'haus', wohnflaeche: 120, nebenkostenQm: 3, instandhaltungQmJahr: 15 });
+  assert.deepStrictEqual(haus, { nebenkosten: 360, ruecklage: 150, summe: 510 });
+  const wohnung = C.bewirtschaftung({ objektart: 'wohnung', hausgeld: 400, wohnungSonstiges: 80, wohnflaeche: 80 });
+  assert.deepStrictEqual(wohnung, { nebenkosten: 480, ruecklage: 0, summe: 480 });
+});
+
+test('E4b: bewirtschaftung ignoriert negative und ungueltige Werte', () => {
+  const b = C.bewirtschaftung({ objektart: 'haus', wohnflaeche: -50, nebenkostenQm: 'abc', instandhaltungQmJahr: 15 });
+  assert.deepStrictEqual(b, { nebenkosten: 0, ruecklage: 0, summe: 0 });
+});
+
+test('E5: finanzierung liefert effektivzins, bewirtschaftung und belastungGesamt', () => {
+  const f = C.finanzierung(C.DEFAULTS);
+  assert.strictEqual(f.belastungGesamt, f.rateGesamt + f.bewirtschaftung.summe);
+  assert.ok(f.effektivzins > C.DEFAULTS.zins, `effektivzins ${f.effektivzins}`);
+  assert.strictEqual(f.bewirtschaftung.summe, 510);
+});
+
+test('E6: DEFAULTS enthalten keine bewirtschaftung im Haushalt mehr', () => {
+  assert.strictEqual('bewirtschaftung' in C.HAUSHALT_DEFAULTS, false);
+  assert.strictEqual(C.DEFAULTS.objektart, 'haus');
+  assert.strictEqual(C.DEFAULTS.einmalkosten, 0);
+});

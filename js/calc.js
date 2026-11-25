@@ -18,6 +18,13 @@
     anschlusszins: 4.5,
     anschlussTilgung: 2.0,
     sondertilgungJahr: 0,
+    einmalkosten: 0,
+    objektart: 'haus',
+    wohnflaeche: 120,
+    nebenkostenQm: 3.0,
+    instandhaltungQmJahr: 15,
+    hausgeld: 400,
+    wohnungSonstiges: 80,
     kfw: { aktiv: false, betrag: 100000, zins: 2.5, tilgung: 2.0, zinsbindungJahre: 10 }
   };
 
@@ -28,7 +35,6 @@
     sonstigeEinnahmen: 0,
     lebenshaltung: 1800,
     fixkosten: 400,
-    bewirtschaftung: 350,
     puffer: 300,
     maxQuote: 35
   };
@@ -139,6 +145,82 @@
     };
   }
 
+  // Zahlungsreihe der Zinsbindung (Monatsende) wie in annuitaetenplan, im letzten Monat inkl. Restschuld
+  function zahlungsreiheZinsbindung(o) {
+    const betrag = num(o.betrag);
+    const zins = num(o.zins);
+    const tilgung = num(o.tilgung);
+    const zbMonate = Math.max(0, Math.round(num(o.zinsbindungJahre) * 12));
+    const sonder = Math.max(0, num(o.sondertilgungJahr));
+    const rate = betrag * (zins + tilgung) / 100 / 12;
+    const zahlungen = [];
+    let rest = betrag;
+    for (let monate = 1; monate <= zbMonate && rest >= 0.005; monate++) {
+      const zinsMonat = rest * zins / 100 / 12;
+      let tilg = Math.min(rate - zinsMonat, rest);
+      if (!(tilg > 0)) tilg = 0;
+      rest -= tilg;
+      let zahlung = zinsMonat + tilg;
+      if (monate % 12 === 0 && sonder > 0 && rest > 0) {
+        const st = Math.min(sonder, rest);
+        rest -= st;
+        zahlung += st;
+      }
+      if (monate === zbMonate) {
+        zahlung += rest;
+        rest = 0;
+      }
+      zahlungen.push(zahlung);
+    }
+    return zahlungen;
+  }
+
+  // Effektivzins nach PAngV-Methode (monatliche Zahlungen), in Prozent p. a.
+  function effektivzins(o) {
+    const opts = o || {};
+    const betrag = num(opts.betrag);
+    if (betrag <= 0 || num(opts.zinsbindungJahre) <= 0) return 0;
+    const zahlungen = zahlungsreiheZinsbindung(opts);
+    const auszahlung = betrag - num(opts.einmalkosten);
+    if (auszahlung <= 0) return 0;
+
+    function barwert(i) {
+      let summe = 0;
+      let faktor = 1;
+      for (let m = 0; m < zahlungen.length; m++) {
+        faktor /= (1 + i);
+        summe += zahlungen[m] * faktor;
+      }
+      return summe;
+    }
+
+    let lo = 0;
+    let hi = 0.05;
+    for (let k = 0; k < 200; k++) {
+      const mitte = (lo + hi) / 2;
+      if (barwert(mitte) > auszahlung) lo = mitte;
+      else hi = mitte;
+    }
+    const i = (lo + hi) / 2;
+    return (Math.pow(1 + i, 12) - 1) * 100;
+  }
+
+  // Laufende Kosten der Immobilie in €/Monat
+  function bewirtschaftung(e) {
+    const o = e || {};
+    let nk;
+    let ruecklage;
+    if (o.objektart === 'wohnung') {
+      nk = Math.max(0, num(o.hausgeld)) + Math.max(0, num(o.wohnungSonstiges));
+      ruecklage = 0;
+    } else {
+      const flaeche = Math.max(0, num(o.wohnflaeche));
+      nk = flaeche * Math.max(0, num(o.nebenkostenQm));
+      ruecklage = flaeche * Math.max(0, num(o.instandhaltungQmJahr)) / 12;
+    }
+    return { nebenkosten: nk, ruecklage, summe: nk + ruecklage };
+  }
+
   function finanzierung(eingaben) {
     const e = eingaben || {};
     const satz = typeof e.grunderwerbsteuerSatz === 'number' && Number.isFinite(e.grunderwerbsteuerSatz)
@@ -183,6 +265,9 @@
       sondertilgungJahr: e.sondertilgungJahr
     });
 
+    const rateGesamt = bank.rate + (kfwPlan ? kfwPlan.rate : 0);
+    const bew = bewirtschaftung(e);
+
     return {
       nebenkosten: nk,
       gesamtkosten,
@@ -191,7 +276,17 @@
       eigenkapitalQuote,
       bank,
       kfw: kfwPlan,
-      rateGesamt: bank.rate + (kfwPlan ? kfwPlan.rate : 0),
+      rateGesamt,
+      effektivzins: effektivzins({
+        betrag: bank.betrag,
+        zins: e.zins,
+        tilgung: e.tilgung,
+        zinsbindungJahre: e.zinsbindungJahre,
+        sondertilgungJahr: e.sondertilgungJahr,
+        einmalkosten: e.einmalkosten
+      }),
+      bewirtschaftung: bew,
+      belastungGesamt: rateGesamt + bew.summe,
       gesamtzinsen: bank.gesamtzinsen + (kfwPlan ? kfwPlan.gesamtzinsen : 0),
       restschuldZinsbindung: bank.restschuldZinsbindung,
       tilgbar: bank.tilgbar && (kfwPlan ? kfwPlan.tilgbar : true)
@@ -241,6 +336,8 @@
     HAUSHALT_DEFAULTS,
     nebenkosten,
     annuitaetenplan,
+    effektivzins,
+    bewirtschaftung,
     finanzierung,
     stresstest,
     leistbarkeit,
