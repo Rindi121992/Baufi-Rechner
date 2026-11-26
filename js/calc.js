@@ -81,13 +81,12 @@
     if (betrag <= 0) {
       return {
         betrag: 0, rate: 0, anschlussrate: 0, restschuldZinsbindung: 0, gesamtzinsen: 0,
-        zinsenZinsbindung: 0, laufzeitMonate: 0, tilgbar: true, jahre: [], zahlungenZinsbindung: []
+        zinsenZinsbindung: 0, laufzeitMonate: 0, tilgbar: true, tilgtInZinsbindung: true, jahre: [], zahlungenZinsbindung: []
       };
     }
 
     const rate = betrag * (zins + tilgung) / 100 / 12;
-    let tilgbar = true;
-    if (zbMonate > 0 && rate <= betrag * zins / 100 / 12) tilgbar = false;
+    const tilgtInZinsbindung = !(zbMonate > 0 && rate <= betrag * zins / 100 / 12);
 
     let rest = betrag;
     let monate = 0;
@@ -111,7 +110,6 @@
         if (rateP2 === null) {
           rateP2 = rest * (anschlusszins + anschlussTilgung) / 100 / 12;
           anschlussrate = rateP2;
-          if (rateP2 <= rest * anschlusszins / 100 / 12) tilgbar = false;
         }
         zinssatz = anschlusszins;
         r = rateP2;
@@ -146,8 +144,13 @@
       j.restschuld = rest;
     }
 
-    // Für den Effektivzins: Restschuld wird im letzten Monat der Zinsbindung als Zahlung gewertet
-    if (zahlungenZB.length === zbMonate && zbMonate > 0) zahlungenZB[zbMonate - 1] += restZB;
+    // Für den Effektivzins: Restschuld wird im letzten Monat der Zinsbindung als Zahlung gewertet.
+    // Die Liste hat dann min(monate, zbMonate) Einträge; das gilt auch, wenn die Schleife
+    // vorher (z. B. bei kurzem maxJahre) innerhalb der Zinsbindung endet.
+    if (zahlungenZB.length > 0) zahlungenZB[zahlungenZB.length - 1] += restZB;
+
+    // Vollständig getilgt, wenn die Schleife bei Restschuld 0 endet (sonst Laufzeitgrenze erreicht)
+    const tilgbar = rest < 0.005;
 
     return {
       betrag,
@@ -158,6 +161,7 @@
       zinsenZinsbindung: zinsenZB,
       laufzeitMonate: monate,
       tilgbar,
+      tilgtInZinsbindung,
       jahre,
       zahlungenZinsbindung: zahlungenZB
     };
@@ -177,7 +181,7 @@
   function effektivzinsAusPlan(plan, einmalkosten) {
     const zahlungen = plan.zahlungenZinsbindung;
     const auszahlung = plan.betrag - num(einmalkosten);
-    if (plan.betrag <= 0 || zahlungen.length === 0 || auszahlung <= 0) return 0;
+    if (plan.betrag <= 0 || zahlungen.length === 0 || auszahlung <= 0) return null;
     let lo = 0;
     let hi = 0.05;
     while (hi - lo > 1e-12) {
@@ -262,14 +266,16 @@
       belastungGesamt: rateGesamt + bew.summe,
       gesamtzinsen: bank.gesamtzinsen + (kfwPlan ? kfwPlan.gesamtzinsen : 0),
       restschuldZinsbindung: bank.restschuldZinsbindung,
-      tilgbar: bank.tilgbar && (kfwPlan ? kfwPlan.tilgbar : true)
+      tilgbar: bank.tilgbar && (kfwPlan ? kfwPlan.tilgbar : true),
+      tilgtInZinsbindung: bank.tilgtInZinsbindung && (kfwPlan ? kfwPlan.tilgtInZinsbindung : true)
     };
   }
 
-  // Stresstest: nur das Bankdarlehen, Betrag einmal ermitteln, dann je Anschlusszins nur der Plan
-  function stresstest(eingaben, anschlusszinsen) {
+  // Stresstest: nur das Bankdarlehen, Betrag einmal ermitteln, dann je Anschlusszins nur der Plan.
+  // Optional: fertiges finanzierung()-Ergebnis, damit der Betrag nicht erneut berechnet wird.
+  function stresstest(eingaben, anschlusszinsen, f) {
     const liste = anschlusszinsen || [3, 4, 5, 6, 7];
-    const betrag = finanzierung(eingaben).bank.betrag;
+    const betrag = (f || finanzierung(eingaben)).bank.betrag;
     return liste.map(function (az) {
       const plan = annuitaetenplan(Object.assign(bankOptionen(eingaben, betrag), { anschlusszins: az }));
       return {

@@ -119,6 +119,60 @@ async function main() {
 
     await ctx.close();
 
+    // ---------- Randfälle: Effektivzins, Tilgbarkeit, Leistbarkeit ----------
+    const rCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const rPage = await rCtx.newPage();
+    const rFehler = [];
+    rPage.on('console', (msg) => { if (msg.type() === 'error') rFehler.push('console: ' + msg.text()); });
+    rPage.on('pageerror', (err) => rFehler.push('pageerror: ' + err.message));
+    await rPage.goto(INDEX);
+    await rPage.waitForSelector('#out-rate');
+    await rPage.evaluate(() => localStorage.clear());
+    await rPage.reload();
+    await rPage.waitForSelector('#out-rate');
+
+    const setze = async (id, wert) => {
+      await rPage.fill('#' + id, String(wert));
+      await rPage.dispatchEvent('#' + id, 'input');
+    };
+
+    await setze('einmalkosten', 900000);
+    const ezLeer = await rPage.textContent('#out-effektivzins');
+    pruefe('Einmalkosten 900000: Effektivzins „–“', ezLeer === '–', 'Anzeige: ' + ezLeer);
+    await setze('einmalkosten', 0);
+
+    await setze('tilgung', 0);
+    const warnText = await rPage.textContent('#warnung-tilgbar');
+    const warnSichtbar = await rPage.isVisible('#warnung-tilgbar');
+    pruefe('Tilgung 0: Warnung „In der Zinsbindung wird nichts getilgt…“ sichtbar',
+      warnSichtbar && /^In der Zinsbindung wird nichts getilgt/.test(warnText), 'Anzeige: ' + warnText);
+    const stressText = await rPage.textContent('#stress-body');
+    pruefe('Tilgung 0: Stresstest ohne „nicht tilgbar“', !/nicht tilgbar/.test(stressText));
+
+    await setze('anschlusstilgung', 0);
+    const warnNie = await rPage.textContent('#warnung-tilgbar');
+    const warnNieSichtbar = await rPage.isVisible('#warnung-tilgbar');
+    pruefe('Tilgung 0 und Anschlusstilgung 0: Warnung „…wird nie getilgt.“',
+      warnNieSichtbar && /wird nie getilgt\.$/.test(warnNie), 'Anzeige: ' + warnNie);
+    await setze('anschlusstilgung', 2);
+    await setze('tilgung', 2);
+    const warnWeg = await rPage.isVisible('#warnung-tilgbar');
+    pruefe('Tilgung 2 und Anschlusstilgung 2: Warnung ausgeblendet', !warnWeg);
+
+    await rPage.click('#tab-leistbarkeit');
+    await setze('netto1', 0);
+    await setze('netto2', 0);
+    await setze('sonstige', 0);
+    const gesamtLeer = await rPage.textContent('#leist-gesamt');
+    pruefe('Leistbarkeit ohne Einnahmen: Gesamtbelastung ohne „= –“',
+      /Gesamtbelastung/.test(gesamtLeer) && !/–\s*$/.test(gesamtLeer), 'Anzeige: ' + gesamtLeer);
+    const ampelLeer = await rPage.textContent('#leist-ampel-wert');
+    pruefe('Leistbarkeit ohne Einnahmen: Ampel-Wert „–“', ampelLeer === '–', 'Anzeige: ' + ampelLeer);
+
+    await rPage.waitForTimeout(300);
+    pruefe('Keine Konsolenfehler (Randfälle-Lauf)', rFehler.length === 0, rFehler.join(' | ').slice(0, 300));
+    await rCtx.close();
+
     // ---------- Altdaten-Lauf: altes Szenario mit bundesland und abweichendem Satz ----------
     const altCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const altPage = await altCtx.newPage();

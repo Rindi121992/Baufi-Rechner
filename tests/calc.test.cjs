@@ -142,9 +142,42 @@ test('E2: effektivzins mit Einmalkosten 3000 € (4,2160 %)', () => {
   nah(ez, 4.2160, 0.002, 'effektivzins');
 });
 
-test('E3: effektivzins 15 Jahre Zinsbindung (3,6600 %), betrag 0 ergibt 0', () => {
+test('E3: effektivzins 15 Jahre Zinsbindung (3,6600 %), betrag 0 ergibt null', () => {
   nah(C.effektivzins({ betrag: 300000, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, einmalkosten: 0 }), 3.66, 0.001, 'effektivzins');
-  assert.strictEqual(C.effektivzins({ betrag: 0, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, einmalkosten: 0 }), 0);
+  assert.strictEqual(C.effektivzins({ betrag: 0, zins: 3.6, tilgung: 2, zinsbindungJahre: 15, einmalkosten: 0 }), null);
+});
+
+test('E7: effektivzins bei kurzem maxJahre mit Restschuld (4,0742 %)', () => {
+  nah(C.effektivzins({ betrag: 300000, zins: 4, tilgung: 2, zinsbindungJahre: 10, maxJahre: 5 }), 4.0742, 0.001, 'effektivzins');
+});
+
+test('E8: effektivzins null bei Einmalkosten > betrag, Sollzins 0 ohne Kosten ergibt 0', () => {
+  assert.strictEqual(C.effektivzins({ betrag: 300000, zins: 4, tilgung: 2, zinsbindungJahre: 10, einmalkosten: 400000 }), null);
+  nah(C.effektivzins({ betrag: 300000, zins: 0, tilgung: 2, zinsbindungJahre: 10, einmalkosten: 0 }), 0, 0.0001, 'effektivzins');
+});
+
+test('T1: stresstest mit uebergebenem finanzierung-Ergebnis liefert dieselben Zeilen', () => {
+  const eing = Object.assign({}, C.DEFAULTS);
+  assert.deepStrictEqual(C.stresstest(eing, undefined, C.finanzierung(eing)), C.stresstest(eing));
+});
+
+test('T2: annuitaetenplan unterscheidet tilgbar und tilgtInZinsbindung', () => {
+  const p = C.annuitaetenplan({ betrag: 100000, zins: 5, tilgung: 0, zinsbindungJahre: 10, anschlusszins: 3, anschlussTilgung: 2 });
+  assert.strictEqual(p.tilgbar, true);
+  assert.strictEqual(p.tilgtInZinsbindung, false);
+  assert.ok(p.laufzeitMonate < 1200, `laufzeit ${p.laufzeitMonate}`);
+  const k4 = C.annuitaetenplan({ betrag: 100000, zins: 5, tilgung: 0, zinsbindungJahre: 10, anschlusszins: 5, anschlussTilgung: 0 });
+  assert.strictEqual(k4.tilgbar, false);
+  assert.strictEqual(k4.laufzeitMonate, 1200);
+  assert.strictEqual(k4.tilgtInZinsbindung, false);
+  const k2 = C.annuitaetenplan({ betrag: 300000, zins: 4, tilgung: 2, zinsbindungJahre: 10, anschlusszins: 4, anschlussTilgung: 2 });
+  assert.strictEqual(k2.tilgbar, true);
+  assert.strictEqual(k2.tilgtInZinsbindung, true);
+});
+
+test('T3: stresstest mit DEFAULTS und Tilgung 0 ist in allen Zeilen tilgbar', () => {
+  const s = C.stresstest(Object.assign({}, C.DEFAULTS, { tilgung: 0, zins: 3.6, anschlussTilgung: 2 }));
+  assert.ok(s.every((z) => z.tilgbar === true), JSON.stringify(s));
 });
 
 test('E4: bewirtschaftung Haus und Wohnung', () => {

@@ -54,7 +54,9 @@ Alle Pfade in der App sind relativ, deshalb funktioniert sie sowohl per `file://
   maximal bis zur Restschuld.
 - Nach der Zinsbindung wird die Anschlussrate aus der Restschuld mit Anschlusszins und
   Anschlusstilgung neu berechnet.
-- Ist die Rate nicht höher als der erste Monatszins, wird das Darlehen nie getilgt; die App zeigt dann eine Warnung.
+- Ist die Rate nicht höher als der erste Monatszins, wird in der Zinsbindung nicht getilgt; die App zeigt dann einen Hinweis.
+  Tilgt das Darlehen auch in der Anschlussfinanzierung nicht, zeigt die App die Warnung, dass es nie getilgt wird.
+  „Tilgbar“ heißt: das Darlehen ist innerhalb der Laufzeitgrenze vollständig getilgt.
 - KfW-Darlehen: eigener Plan mit eigenem Zins, eigener Tilgung und eigener Zinsbindung, ohne Sondertilgung.
   Die Anschlussrate, die Restschuld nach Zinsbindung und der Stresstest beziehen sich auf das Bankdarlehen.
 - Effektivzins (PAngV-Methode, monatliche Zahlungen): nur für das Bankdarlehen, über die Zinsbindung berechnet.
@@ -62,6 +64,8 @@ Alle Pfade in der App sind relativ, deshalb funktioniert sie sowohl per `file://
   Restschuld). Der monatliche Zinssatz i wird per Bisektion so bestimmt, dass der Barwert der Zahlungen der Auszahlung
   (Darlehen minus einmalige Kreditkosten) entspricht; ausgewiesen wird `(1 + i)^12 − 1`. Das ist eine Annäherung an
   die Bankangabe: Nach der Zinsbindung, beim KfW-Darlehen und bei weiteren Kosten wird nichts berücksichtigt.
+  Ist die Auszahlung nicht positiv (Einmalkosten ≥ Darlehen) oder gibt es keine Zahlungen, wird kein Effektivzins
+  ausgewiesen („–“).
 - Laufende Kosten je Szenario, als Monatsbetrag und in die Leistbarkeit eingerechnet:
   Haus = Wohnfläche × Nebenkosten (€/m²/Monat) + Wohnfläche × Instandhaltungsrücklage (€/m²/Jahr) / 12;
   Wohnung = Hausgeld + Sonstiges (Rücklage ist im Hausgeld enthalten).

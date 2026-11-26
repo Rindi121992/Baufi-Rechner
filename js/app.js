@@ -24,8 +24,9 @@
 
   function proMonat(v) { return eur0.format(v) + ' / Monat'; }
 
+  // null ohne Einnahmen; Anzeige dann als „–“
   function quoteVon(betrag, einnahmen) {
-    return einnahmen > 0 ? pct(betrag / einnahmen * 100, 1) + ' der Einnahmen' : '–';
+    return einnahmen > 0 ? pct(betrag / einnahmen * 100, 1) + ' der Einnahmen' : null;
   }
 
   function pct(v, digits) {
@@ -269,7 +270,7 @@
       ? 'Bank ' + eur2.format(b.rate) + ' · KfW ' + eur2.format(k.rate)
       : 'Bankdarlehen, Annuität';
     $('out-gesamt').textContent = eur2.format(f.belastungGesamt);
-    $('out-effektivzins').textContent = pct(f.effektivzins, 2);
+    $('out-effektivzins').textContent = f.effektivzins === null ? '–' : pct(f.effektivzins, 2);
     $('out-sollzins').textContent = 'Bankdarlehen · Sollzins ' + pct(e.zins, 2);
 
     const bew = f.bewirtschaftung;
@@ -302,12 +303,15 @@
     $('out-beleihung-hinweis').textContent = hinweis;
     $('out-ek-quote').textContent = pct(f.eigenkapitalQuote, 1);
 
-    $('warnung-tilgbar').hidden = f.tilgbar;
+    const warnung = $('warnung-tilgbar');
+    if (!f.tilgbar) warnung.textContent = 'Rate deckt die Zinsen nicht – Darlehen wird nie getilgt.';
+    else if (!f.tilgtInZinsbindung) warnung.textContent = 'In der Zinsbindung wird nichts getilgt – die Rate deckt nur die Zinsen. Getilgt wird erst in der Anschlussfinanzierung.';
+    warnung.hidden = f.tilgbar && f.tilgtInZinsbindung;
     $('kfw-plan-box').hidden = !k;
 
     const stressBody = $('stress-body');
     stressBody.textContent = '';
-    C.stresstest(e).forEach(function (z) {
+    C.stresstest(e, undefined, f).forEach(function (z) {
       const tr = el('tr');
       tr.appendChild(el('td', pct(z.anschlusszins, 1)));
       tr.appendChild(el('td', z.anschlussrate > 0 ? eur2.format(z.anschlussrate) : '–'));
@@ -354,7 +358,7 @@
       { label: 'Kaufnebenkosten', wert: function (s, f) { return eur0.format(f.nebenkosten.summe); } },
       { label: 'Darlehen', wert: function (s, f) { return eur0.format(f.darlehenGesamt); } },
       { label: 'Sollzins', wert: function (s) { return pct(s.eingaben.zins, 2); } },
-      { label: 'Effektivzins', wert: function (s, f) { return pct(f.effektivzins, 2); } },
+      { label: 'Effektivzins', wert: function (s, f) { return f.effektivzins === null ? '–' : pct(f.effektivzins, 2); } },
       { label: 'Tilgung', wert: function (s) { return pct(s.eingaben.tilgung, 2); } },
       { label: 'Zinsbindung', wert: function (s) { return s.eingaben.zinsbindungJahre + ' Jahre'; } },
       { label: 'Monatsrate', wert: function (s, f) { return eur2.format(f.rateGesamt); }, zahl: function (f) { return f.rateGesamt; } },
@@ -452,15 +456,16 @@
 
     const amp = C.ampel(f.rateGesamt, l.einnahmen);
     $('leist-ampel').className = 'ampel ampel-' + amp;
-    $('leist-ampel-wert').textContent = quoteVon(f.rateGesamt, l.einnahmen);
+    $('leist-ampel-wert').textContent = quoteVon(f.rateGesamt, l.einnahmen) || '–';
     let text;
     if (amp === 'gruen') text = 'Gut tragbar: die Rate liegt unter 30 % der Einnahmen.';
     else if (amp === 'gelb') text = 'Angespannt: die Rate liegt zwischen 30 und 40 % der Einnahmen.';
     else text = 'Zu hoch: die Rate liegt über 40 % der Einnahmen oder es gibt keine Einnahmen.';
     $('leist-ampel-text').textContent = text;
 
-    $('leist-gesamt').textContent = 'Gesamtbelastung ' + eur0.format(f.belastungGesamt) + ' = ' +
-      quoteVon(f.belastungGesamt, l.einnahmen);
+    const quoteGesamt = quoteVon(f.belastungGesamt, l.einnahmen);
+    $('leist-gesamt').textContent = 'Gesamtbelastung ' + eur0.format(f.belastungGesamt) +
+      (quoteGesamt === null ? '' : ' = ' + quoteGesamt);
 
     $('btn-kaufpreis-uebernehmen').disabled = !(Math.floor(l.maxKaufpreis / 1000) * 1000 > 0);
   }
